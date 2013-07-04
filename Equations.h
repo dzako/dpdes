@@ -1,3 +1,23 @@
+/*  dPDEs - this program is an open research software performing rigorous integration in time of partial differential equations
+    Copyright (C) 2010-2013  Jacek Cyranka
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    
+    Please consult the webpage www.cyranka.net,
+    or contact me on jcyranka@gmail.com for further details.
+*/
+
 /*
  * Equations.h
  *
@@ -53,14 +73,6 @@ public:
   static const double S_DISSIPATIVE = -1;
 
   Burgers(RealType nu_) : nu(nu_){
-    m_p=2.;
-    m_d=1.;
-    m_r=1.;
-    m_sufficientlyLarge=m_d+m_p+1;
-    m_N_coeff = -0.5;
-  }
-  
-  Burgers(int m, int M, RealType nu_) : SubspaceType(m, M), nu(nu_){
     m_p=2.;
     m_d=1.;
     m_r=1.;
@@ -134,14 +146,6 @@ public:
       m_sufficientlyLarge=m_d+m_p+1;
       m_N_coeff=-1.;
     }
-    
-    GL(int m, int M, RealType nu_) : SubspaceType(m, M), nu(nu_){
-      m_p=2.;
-      m_d=1.;
-      m_r=0.;
-      m_sufficientlyLarge=m_d+m_p+1;
-      m_N_coeff=-1.;
-    }
 
     RealType ni(int k) const{  return nu; }
 
@@ -202,7 +206,7 @@ public:
     int m_r;
     int m_sufficientlyLarge;
     ComplexType m_N_coeff;
-    double S_DISSIPATIVE;
+    static const double S_DISSIPATIVE = -0.01;
 
     KS(RealType nu_) : nu(nu_){
       m_p=4.;
@@ -210,16 +214,6 @@ public:
       m_r=1.;
       m_sufficientlyLarge=m_d+m_p+1;
       m_N_coeff=1.;
-      S_DISSIPATIVE = -0.01;
-    }
-    
-    KS(int m, int M, RealType nu_) : SubspaceType(m, M), nu(nu_){
-      m_p=4.;
-      m_d=1.;
-      m_r=1.;
-      m_sufficientlyLarge=m_d+m_p+1;
-      m_N_coeff=1.;
-      S_DISSIPATIVE = -0.01;
     }
 
     RealType ni(int k) const{  IndexType j=array2modeIndex(k); return (j.isZero() ? 0 : nu - 1./j.squareEuclNorm()); }
@@ -420,26 +414,13 @@ public:
   bool initializedHigherDFT;
   RealType pi;
   
-  
-  /**The constructor for FINITE dimensional integrator - only the projection is taken into account 
-   */
-  DPDE2(int m_, int dftPts1_, RealType nu_, RealType pi_, int order) : EquationType(m_, m_, nu_), m(m_),
-      dftPts1(dftPts1_), dftPts(dftPts1), fft1(m, dftPts1, pi_), ir_m(IndexType::zero()),
-      ir_M(IndexType::zero()), tpb(m_, m_), tg1(dftPts1), tg1_2(dftPts1), sdft(dftPts1), tmc(m), tmc2(m),
-      tmc3(m), empty(dftPts1), rhs(dftPts1), useFFT(false), td(m), tl(m), yc(PolyBdType::modes2realArraySizeStatic(m_)),
-      forcing(PolyBdType::modes2realArraySizeStatic(m_)), initializedHigherDFT(false), pi(pi_){    
-    ir_m.setRange(0, strong, m, weak);    
-  }
-  
-  
-  /**The constructor for INFINITE dimensional integrator (differential inclusion, with tails etc...)  
-   */
-  DPDE2(int m_, int M_, int dftPts1_, int dftPts2_, RealType nu_, RealType pi_, int order, bool initializeHigherDFT = true) : EquationType(m_, M_, nu_), m(m_), M(M_),
+
+  DPDE2(int m_, int M_, int dftPts1_, int dftPts2_, RealType nu_, RealType pi_, int order, bool initializeHigherDFT = true) : EquationType(nu_), m(m_), M(M_),
       dftPts1(dftPts1_), dftPts(dftPts1), fft1(m, dftPts1, pi_), dftPts2(dftPts2_), dftPts3(2 * dftPts2_), ir_m(IndexType::zero()),
       ir_M(IndexType::zero()), m_Nt(m, M), m_bt(m, M), m_gt(m, M), tpb(m, M), tg1(dftPts1), tg2(dftPts2),
       tg3(dftPts3), tg1_2(dftPts1), tg2_2(dftPts2), tg3_2(dftPts3), sdft(dftPts1), tmc(m), tmc2(m),
       tmc3(m), empty(dftPts1), rhs(dftPts1), useFFT(false), td(m), tl(m), yc(PolyBdType::modes2realArraySizeStatic(m_)),
-      forcing(PolyBdType::modes2realArraySizeStatic(m_)), initializedHigherDFT(initializeHigherDFT), pi(pi_){    
+      forcing(PolyBdType::modes2realArraySizeStatic(m_)), initializedHigherDFT(initializeHigherDFT), pi(pi_){
     if(initializeHigherDFT){
       fft2 = FFTType(M, dftPts2, pi);
       fft3 = FFTType(2*M, dftPts3, pi);
@@ -479,6 +460,7 @@ public:
   inline void rightHandSide(int i, const GridsContainerType& grids, const ModesContainerContainerType& modes,
                             ModesContainerType& rhsSeries, DFTGridType& rhsFunctionSpace, bool calculateRhsFunctionSpace = true){
     int j;
+    
     //if the solution is real valued and even/odd then there are a lot of zeros in the jets, and the additions/multiplication by
     //zeros should be avoided
     if(ScalarT::initialConditionIsRealValued()) ///optimizing thing
@@ -497,14 +479,18 @@ public:
       scalarProduct(i/2, i/2, grids[i/2], grids[i/2], sdft);
       if(i == 0) rhs = sdft;
       else rhs += sdft;
-    }
-
+    }    
+        
     //we switch back to complex valued, because the FFT is complex, regardless the solution is real valued
-    ScalarT::switchToComplexValued();
-    fft1.fastInverseTransform(rhs, rhsSeries);
+    
+    ScalarT::switchToComplexValued();      
+       
+    fft1.fastInverseTransform(rhs, rhsSeries);    
+    
     generalDebug2 << "rhsSeries:\n" << rhsSeries << "\n";
+    
     //here we cannot switch to real valued, because multiplication by i (switches zeros re to/from im)   
-    rhsSeries *= (Ncoeff()) * (ComplexScalarType::i());
+    rhsSeries *= ((Ncoeff()) * (ComplexScalarType::i()));
     if(ScalarT::initialConditionIsRealValued())
       ScalarT::switchToRealValued();
     multiplyComponents(rhsSeries);    
@@ -517,9 +503,10 @@ public:
       rhsSeries += forcing;
     }    
     rhsSeries *= RealType(1) / RealType(i+1);    
+    
     //we switch back to complex valued, because the FFT is complex
-    ScalarT::switchToComplexValued();
-    if(calculateRhsFunctionSpace) fft1.fastTransform(rhsSeries, rhsFunctionSpace);
+    ScalarT::switchToComplexValued();    
+    if(calculateRhsFunctionSpace) fft1.fastTransform(rhsSeries, rhsFunctionSpace);    
   }
 
   /**Procedure for calculating i-th normalized derivative. NOT USING FFT.
@@ -580,7 +567,7 @@ public:
   inline void multiplyComponents(ModesContainerType& pb) const{
     IndexType i;
     const IndexRangeType& range((pb.infiniteDimensional ? ir_M : ir_m));
-    pb[IndexType::zero()] *= ComplexScalarType(0);
+    pb[IndexType(0)] *= ComplexScalarType(0);
     for(i = firstModeIndex(range); !i.limitReached(range); i.inc(range)){
       pb[i] *= ComplexScalarType(i[0]);
     }
@@ -868,11 +855,10 @@ public:
   /**Nonlinear part of the vector field.
    */
   inline virtual void N(const ModesContainerType& in, ModesContainerType& out, int range = full){
-    if(useFFT){      
+    if(useFFT)
       CalculateNonlinearTermUsingFFT(in, out);
-    }else{
+    else
       CalculateNonlinearTermDirectly(in, out, range);
-    }
   }
 
   /**Linear part of the vector field.
@@ -890,22 +876,19 @@ public:
 
   /**Whole vector field. L + N.
    */
-  inline void operator()(const ModesContainerType& in, ModesContainerType& out, int range = full){    
-    L(in, out);    
-    
+  inline void operator()(const ModesContainerType& in, ModesContainerType& out, int range = full){
+    L(in, out);
     N(in, tpb, range);
-    
     out += tpb;
     out += yc; ///add y_c
-
     out += forcing; ///add forcing
   }
 
   inline void CalculateNonlinearTermUsingFFT(const ModesContainerType& in, ModesContainerType& out){
     if(!in.infiniteDimensional){
       fft1.fastTransform(in, tg1);
-      tg1_2.multiply(tg1, tg1);      
-      fft1.fastInverseTransform(tg1_2, out);      
+      tg1_2.multiply(tg1, tg1);
+      fft1.fastInverseTransform(tg1_2, out);
     }else{
       fft3.fastTransform(in, tg3, capd::jaco::none);
       tg3_2.multiply(tg3, tg3);
@@ -1504,18 +1487,6 @@ public:
 };
 
 
-/** 2DCompatible version
- */
-template<class EquationT, class FFTT, int ORD>
-class DPDE22DCompatible : public DPDE2<EquationT, FFTT, ORD>{
-
-  
-
-  
-};
-
-
-
 /**This class represents a PDE consisting a nonlinear part which is a third order polynomial. For the description see
  * DPDE2 class.
  *
@@ -1591,7 +1562,7 @@ public:
   inline void rightHandSide(int i, const GridsContainerType& grids, const ModesContainerContainerType& modes,
                             ModesContainerType& rhsSeries, DFTGridType& rhsFunctionSpace, bool calculateRhsFunctionSpace = true){
     //if the solution is real valued and even/odd then there are a lot of zeros in the jets, and the additions/multiplication by
-    //zeros should be avoided
+    //zeros should be avoided    
     if(grids[0].isRealValued()) ///optimizing thing
       ScalarT::switchToRealValuedL2(); //if solution is real valued then imaginary part of jets is zero    
     calculateConvolution(i, grids);
@@ -1600,11 +1571,11 @@ public:
       sdft.multiplyOnly(convolutions[j], grids[i - j]);      
       if(j == 0) rhs = sdft;
       else rhs += sdft;
-    }
-
-    //we switch back to complex valued, because the FFT is complex, regardless if solution is real valued
-    if(grids[0].isRealValued()) ///optimizing thing
-      ScalarT::switchToComplexValued();
+    }   
+    
+    
+    //we switch back to complex valued, because the FFT is complex, regardless if solution is real valued    
+    ScalarT::switchToComplexValued();    
     fft1.fastInverseTransform(rhs, rhsSeries);    
     //here we cannot switch to real valued, because multiplication by i (switches zeros re to/from im)
     rhsSeries *= Ncoeff();
@@ -1623,13 +1594,13 @@ public:
     }
     rhsSeries *= RealType(1) / RealType(i+1);
     //we switch back to complex valued, because the FFT is complex
-    if(rhsSeries.isRealValued())
-      ScalarT::switchToComplexValued();
-    if(calculateRhsFunctionSpace) fft1.fastTransform(rhsSeries, rhsFunctionSpace);
+    ScalarT::switchToComplexValued();    
+    if(calculateRhsFunctionSpace) fft1.fastTransform(rhsSeries, rhsFunctionSpace);    
   }
 
    inline void rightHandSide(int i, const ModesContainerContainerType& modes, ModesContainerType& rhsSeries){
      int j, k;
+     
      //case of third degree polynomial, two loops have to be used
      //TODO: this is not optimized at all
      for(j=0; j <= i; ++j){
@@ -1861,7 +1832,7 @@ public:
     L(in, out);
     N(in, tpb, range);
     out += tpb;
-    out += yc; ///add y_c    
+    out += yc; ///add y_c
     out += forcing; ///add forcing
   }
 
@@ -1925,15 +1896,10 @@ public:
   using BaseClass::lambda_k;
   using BaseClass::estimatePolynomialBoundForTheInfinitePart;
   using BaseClass::addBound;
+  
+  
 };
 
-/**
- * This will be class representing 2D NS equations - stream function formulation
- */
-template<class EquationT, class FFTT, int ORD>
-class NSStream : public DPDE2<EquationT, FFTT, ORD>{
-
-};
 
 }
 }

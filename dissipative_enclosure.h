@@ -1,3 +1,23 @@
+/*  dPDEs - this program is an open research software performing rigorous integration in time of partial differential equations
+    Copyright (C) 2010-2013  Jacek Cyranka
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    
+    Please consult the webpage www.cyranka.net,
+    or contact me on jcyranka@gmail.com for further details.
+*/
+
 #ifndef _DISSIPATIVEENCLOSURE_H_ 
 #define _DISSIPATIVEENCLOSURE_H_ 
 
@@ -108,8 +128,7 @@ typename FadMapT::VectorType enclosure(FadMapT & vField, typename FadMapT::Matri
   typedef typename FadMapT::VectorType VectorT;
   typedef typename ScalarT::BoundType DoubleT;
 
-  int steps = 5, s = 0, dimension = vField.getDimension();    
-  
+  int steps = 5, s = 0, dimension = vField.getDimension();
   if(dimension > 5) {
     steps = dimension*2;
   }
@@ -347,8 +366,7 @@ typename EquationT::PolyBdType enclosure(EquationT & vField, typename EquationT:
   typedef typename ScalarT::BoundType DoubleT;
   typedef typename EquationT::PolyBdType PolyBdT;
 
-  int steps = 5, s = 0, dimension = vField.dimension();  
-  
+  int steps = 5, s = 0, dimension = vField.dimension();
   if(dimension > 5) {
     steps = dimension*2;
   }
@@ -365,12 +383,9 @@ typename EquationT::PolyBdType enclosure(EquationT & vField, typename EquationT:
 
   ScalarT small = ScalarT(-1, 1) * __SMALL__;
   ScalarT sm;
-  //initial guess  
+  //initial guess
   F(x, tpb, F.getFinitePart());
-  fx = tpb;  
-    
-  enclosureDebug << "calculated F: " << tpb << "\n";
-  
+  fx = tpb;
   for(i = 0; i < dimension; i++) {
     if(F.isDissipative(i)) {
       z[i] = x[i];

@@ -1,3 +1,23 @@
+/*  dPDEs - this program is an open research software performing rigorous integration in time of partial differential equations
+    Copyright (C) 2010-2013  Jacek Cyranka
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    
+    Please consult the webpage www.cyranka.net,
+    or contact me on jcyranka@gmail.com for further details.
+*/
+
 /*
  * DReal.h
  *
@@ -125,7 +145,7 @@ public:
     int i;
     for(i = 0; i<idx.d(); i++)
       idx[i] = m;
-    idx.l = idx.components()-1; //number of components equals to what function 'components' returns in  given 
+    idx.l = idx.d()-1;
     return (idx.mode2array(m, 0)+1) / 2;
   }
 
@@ -139,7 +159,7 @@ public:
     int i;
     for(i = 0; i<idx.d(); i++)
       idx[i] = m;
-    idx.l = idx.components()-1; //number of components equals to what function 'components' returns in  given index    
+    idx.l = idx.d()-1;
     return idx.mode2array(m, 0) + 1;
   }
 
@@ -148,7 +168,7 @@ public:
     int i;
     for(i = 0; i<idx.d(); i++)
       idx[i] = m;
-    idx.l = idx.components()-1; //number of components equals to what function 'components' returns in  given 
+    idx.l = idx.d()-1;
     return (idx.mode2array(m, 0) + 1) / 2;
   }
 
@@ -161,15 +181,14 @@ public:
       std::cerr << "k="<<k<<"\nOperation of obtaining a mode with index k with non integer k is not defined.\n";
       throw std::runtime_error("Operation of obtaining a mode with index k with non integer k is not defined.\n");
     }
-//  if(k.isZero()){
-//    return ComplexScalar(); 
-//  }else{      
-    
-    if(k.upperHalfspace()){        
-      return ComplexScalar(vec[this->mode2array(k, 1)], vec[this->mode2array(k, 0)]);
-    }      
-    return ComplexScalar(vec[this->mode2array(-k, 1)], -vec[this->mode2array(-k, 0)]);
-//  }
+//    if(k.isZero()){
+//      return ComplexScalar();
+//    }else{
+      if(k.upperHalfspace()){
+        return ComplexScalar(vec[this->mode2array(k, 1)], vec[this->mode2array(k, 0)]);
+      }
+      return ComplexScalar(vec[this->mode2array(-k, 1)], -vec[this->mode2array(-k, 0)]);
+//    }
   }
 
   template <typename AVector, typename ComplexScalar>
@@ -194,7 +213,7 @@ public:
 
   ///Stores calculated a_k's mode value in internal representation
   template<typename AVector>
-  inline void setMode(const IndexType& k, const typename capd::jaco::ComplexScalar<typename AVector::ScalarType> mode, AVector& vec) const{    
+  inline void setMode(const IndexType& k, const typename capd::jaco::ComplexScalar<typename AVector::ScalarType>& mode, AVector& vec) const{
     vec[mode2array(k, 1)] = mode.re;
     vec[mode2array(k, 0)] = mode.im;
   }
@@ -324,7 +343,6 @@ public:
     real = false;
     return (k + 1) / 2;
   }
-  
 };
 
 }}

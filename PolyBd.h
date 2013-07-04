@@ -1,3 +1,23 @@
+/*  dPDEs - this program is an open research software performing rigorous integration in time of partial differential equations
+    Copyright (C) 2010-2013  Jacek Cyranka
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    
+    Please consult the webpage www.cyranka.net,
+    or contact me on jcyranka@gmail.com for further details.
+*/
+
 /*
  * PolyBd.h
  *
@@ -71,9 +91,17 @@ public:
 
     RealPolynomialBound(){}
 
+//    RealPolynomialBound(int n_, int d_) : ContainerType(d_), SubspaceType(d_, d_), n(n_), d(d_), farTail(n, n),
+//                                          realContainer(modes2realArraySizeStatic(n_)){
+//      infiniteDimensional = false;
+//      irProjection.setRange(0, capd::jaco::weak, n, capd::jaco::weak);
+//      irFiniteTail.setRange(n, capd::jaco::strong, n, capd::jaco::weak);
+//      irProjectionPlusFiniteTail.setRange(0, capd::jaco::weak, n, capd::jaco::weak);
+//      irFull.setRange(0, capd::jaco::weak, n, capd::jaco::weak);
+//    }
 
-    RealPolynomialBound(int n_) : ContainerType(modes2arraySizeStatic(n_)), SubspaceType(n_,
-                                  n_), n(n_), d(modes2arraySizeStatic(n_)), farTail(n, n),
+    RealPolynomialBound(int n_) : ContainerType(modes2arraySizeStatic(n_)), SubspaceType(modes2arraySizeStatic(n_),
+                                  modes2arraySizeStatic(n_)), n(n_), d(modes2arraySizeStatic(n_)), farTail(n, n),
                                   realContainer(modes2realArraySizeStatic(n_)){
       infiniteDimensional = false;
       irProjection.setRange(0, capd::jaco::weak, n, capd::jaco::weak);
@@ -83,7 +111,7 @@ public:
     }
 
     RealPolynomialBound(int n_, int N_) : ContainerType(modes2arraySizeStatic(2 * N_)),
-                                          SubspaceType(n_, N_), n(n_),
+                                          SubspaceType(modes2arraySizeStatic(n_), modes2arraySizeStatic(N_)), n(n_),
                                           d(modes2arraySizeStatic(n_)), N(N_), D(modes2arraySizeStatic(N_)),
                                           farTail(n_, N_), realContainer(modes2realArraySizeStatic(n_)){
       infiniteDimensional = true;
@@ -143,7 +171,7 @@ public:
           return ContainerType::operator[](mode2array(index));
         return conjugate(ContainerType::operator[](mode2array(index)));
       }else{
-        std::cerr << "RealPolynomialBound.redundantMode called with index ("<<index<<") which is not in the redundant range, squareEuclNorm="<<index.squareEuclNorm()<<".\n";
+        std::cerr << "RealPolynomialBound.redundantMode called with index ("<<index<<") which is not in the redundant range.\n";
         throw std::runtime_error("RealPolynomialBound.redundantMode called with index which is not in the redundant range.\n");
       }
     }
@@ -153,11 +181,11 @@ public:
      */
     inline bool withinRedundantRange(const IndexType& index) const{
       if(infiniteDimensional){
-        if(NormType::squareNorm(index) > 4. * N * N)
+        if(index.squareEuclNorm() > 4. * N * N)
           return false;
         return true;
       }else{
-        if(NormType::squareNorm(index) > n * n)
+        if(index.squareEuclNorm() > n * n)
           return false;
         return true;
       }
@@ -194,7 +222,7 @@ public:
 //          if(index.isZero()){
 //            return zero[index.l];
 //          }else{
-            std::cerr << "RealPolynomialBound.operator[]\nForbidden call with index from the lower halfspace.\nIndex=" << index << "\n";
+            std::cerr << "RealPolynomialBound.operator[]\nForbidden call with index from the lower halfspace.\n";
             throw std::runtime_error("RealPolynomialBound.operator[]\nForbidden call with index from the lower halfspace.\n");
 //          }
         }
@@ -256,19 +284,16 @@ public:
 
     inline RealPolynomialBound& operator+=(const RealContainerType& rct){
       IndexType index;
-      for(index = firstModeIndex(irProjection); !index.limitReached(irProjection); index.inc(irProjection)){ 
+      for(index = firstModeIndex(irProjection); !index.limitReached(irProjection); index.inc(irProjection)){
         (*this)[index] += mode(index, rct);
       }
       return *this;
     }
 
-    //TODO: IMPORTANT - this is exactly what the C++ predefined operator is doing
-    //check if the C++ predefined operator is calling (DPDEContainer&)*this = (DPDEContainer&)hmc; 
-    //and (SubspaceType&)*this = (SubspaceType&)hmc; 
+    //
     inline RealPolynomialBound& operator=(const RealPolynomialBound& rct){
       (DPDEContainer&)*this = (DPDEContainer&)rct;
       (ContainerType&)*this = (ContainerType&)rct;
-      (SubspaceType&)*this = (SubspaceType&)rct;
       n = rct.n;
       N = rct.N;
       d = rct.d;
@@ -332,25 +357,18 @@ public:
 //          }
         }
       }else{
-        std::cerr << "PolynomialBound.set - Forbidden call\nIndex is out of the range" << index << ", squareEuclNorm="<<index.squareEuclNorm()<<" N=" << N << "\n";
+        std::cerr << "PolynomialBound.set - Forbidden call\nIndex is out of the range" << index << ", N=" << N << "\n";
         throw std::runtime_error("PolynomialBound.set - Forbidden call\nIndex is out of the range.\n");
       }
     }
 
-    /**auxilliary function used when casting PolyBd object onto RowVector
-     * 
-     */
-    virtual inline void assignRealContainer(){      
+    virtual inline void assignRealContainer(){
       IndexType index;
-      for(index = firstModeIndex(irProjection); !index.limitReached(irProjection); index.inc(irProjection)){        
-        setMode(index, this->operator[](index), realContainer);        
+      for(index = firstModeIndex(irProjection); !index.limitReached(irProjection); index.inc(irProjection)){
+        setMode(index, this->operator[](index), realContainer);
       }
     }
 
-    /**
-     * The cast operator onto RowVector      
-     * 
-     */
     inline operator const RealContainerType&(){
       assignRealContainer();
       return realContainer;
@@ -517,7 +535,7 @@ public:
     using SubspaceType::mode;
     using SubspaceType::projectOntoImaginarySpace;
     using SubspaceType::projectOntoRealSpace;
-    using SubspaceType::lastModeIndex;
+    using SubspaceType::lastModeIndex;    
 
 };
 

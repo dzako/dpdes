@@ -1,3 +1,23 @@
+/*  dPDEs - this program is an open research software performing rigorous integration in time of partial differential equations
+    Copyright (C) 2010-2013  Jacek Cyranka
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    
+    Please consult the webpage www.cyranka.net,
+    or contact me on jcyranka@gmail.com for further details.
+*/
+
 /*
  * DFTGrid.h
  *
@@ -223,7 +243,7 @@ inline const DFT1DGrid<IntervalT, ScalarT, M> conjugate(const DFT1DGrid<Interval
 
 
 template< class IntervalT, class ScalarT, int M>
-class DFT2DGrid : public capd::jaco::DPDEContainer{
+class DFT2DGrid{
 public:
   typedef ScalarT ScalarType;
   typedef IntervalT IntervalType;
@@ -250,16 +270,6 @@ public:
   }
 
   inline DFT2DGrid& operator*=(ScalarType s){
-    if(s.isImUnit())
-      multiplyByImUnit();
-    int i;
-    for(i=0; i < m; ++i){
-      grid[i] *= s;
-    }
-    return *this;
-  }
-  
-  inline DFT2DGrid& operator*=(const IntervalType& s){    
     int i;
     for(i=0; i < m; ++i){
       grid[i] *= s;
@@ -267,10 +277,7 @@ public:
     return *this;
   }
 
-  inline DFT2DGrid& multiplyAndDivide(const DFT2DGrid& dft1, const DFT2DGrid& dft2){
-    DPDEContainer::multiply(dft1, dft2);
-    
-    //division by the coefficients m^2
+  inline DFT2DGrid& multiply(const DFT2DGrid& dft1, const DFT2DGrid& dft2){
     IntervalType d = IntervalType(1) / IntervalType(m*m);
     int i,j;
     for(i=0; i < m; ++i)
@@ -279,53 +286,13 @@ public:
       }
     return *this;
   }
-  
-  inline DFT2DGrid& multiply(const DFT2DGrid& dft1, const DFT2DGrid& dft2){
-    multiplyAndDivide(dft1, dft2);
-    return *this;
-  }
-  
-  inline void projectOntoSubspace(){
-    int i, j;
-    if(solutionType == capd::jaco::realValued){
-      for(i=0; i < m; ++i)
-        for(j=0; j < m; ++j){
-            grid[i][j].setImaginaryPartToZero();
-        }      
-    }
-  }
 
-  inline void projectOntoRealSpace(){
-    int i, j;
-    for(i=0; i < m; ++i)
-      for(j=0; j < m; ++j){
-          grid[i][j].setImaginaryPartToZero();
-      }          
-  }
-
-  inline void projectOntoImaginarySpace(){
-    int i, j;
-    for(i=0; i < m; ++i)
-      for(j=0; j < m; ++j){
-        grid[i][j].setRealPartToZero();
-      }
-  }
-  
-  inline void setImaginaryPartToZero(){
-    int i, j;
-    for(i=0; i < m; ++i)
-      for(j=0; j < m; ++j){
-        grid[i][j].setImaginaryPartToZero();
-      }
-  }
-  
-  ///output in gnuplot format (three columns - the first two being points on xy plane)
   friend std::ostream& operator<<(std::ostream& out, const DFT2DGrid& c){
     int i, j;
     for(i=0; i < c.m; ++i){
       for(j=0; j < c.m; ++j)
         out << i*2*3.14159265358979323846264338/double(c.m) << " " << j*2*3.14159265358979323846264338/double(c.m)
-        << " " << c[i][j] << "\n";/* leftBound(c[i][j].re) << " " << rightBound(c[i][j].re) << "\n";*/
+        << " " << c[i][j] << "\n";//leftBound(c[i][j].re) << " " << rightBound(c[i][j].re) << "\n";
     }
     return out;
   }

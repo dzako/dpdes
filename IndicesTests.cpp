@@ -1,3 +1,23 @@
+/*  dPDEs - this program is an open research software performing rigorous integration in time of partial differential equations
+    Copyright (C) 2010-2013  Jacek Cyranka
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    
+    Please consult the webpage www.cyranka.net,
+    or contact me on jcyranka@gmail.com for further details.
+*/
+
 /*
  * tests.h
  *
@@ -11,14 +31,13 @@
 #include "config.h"
 #include "capd/vectalg/Vector.h"
 //#include "capd/filib/Interval.h"
-#include "capd/intervals/Interval.hpp"
 #include "Index.h"
 #include "Real.h"
 #include "norms.h"
 
 class IndicesTester{
 public:
-  typedef capd::intervals::Interval<double> Interval;
+  typedef capd::filib::Interval<double> Interval;
   typedef capd::jaco::Index2D Index2D;
   typedef capd::jaco::Index1D Index1D;
   typedef capd::jaco::MaximumNorm<Index1D> MaximumNorm1D;
@@ -141,18 +160,14 @@ public:
     out2.close();
   }
 
-  /**IMPORTANT: testing mode2array functions - returning index of the given mode in an array
-   */
   void test5(int m){
     out.open("test.txt");
     Index2D index;
     IndexRange2D ir(index);
     Real2D real(m, 2*m);
     ir.setRange(0, capd::jaco::strong, m, capd::jaco::weak);
-    for(index = real.firstModeIndex(ir); !index.limitReached(ir); index.inc(ir)){
-      out<<index<<" "<<index.mode2array(m, 1)<<" "<<index.mode2array(m, 0);
-      out<<" "<<Index2D::array2modeIndex(m, index.mode2array(m, 1))<< 
-      " "<<Index2D::array2modeIndex(m, index.mode2array(m, 0)) << "\n";
+    for(index=real.firstModeIndex(ir); !index.limitReached(ir); index.inc(ir)){
+      out<<index<<" "<<index.mode2array(m, 1)<<" "<<index.mode2array(m, 0)<<"\n";
     }
 
     out.close();
@@ -164,16 +179,10 @@ public:
 int main(int argc, char * argv[])
 {
   IndicesTester tester;
-//  if(argc!=4)
-//    std::cerr<<"Wrong nr of params!\n";
-//  else
-//    tester.test4(atoi(argv[1]), atoi(argv[2]), atoi(argv[3]));
-  
-  if(argc!=2)
+  if(argc!=4)
     std::cerr<<"Wrong nr of params!\n";
   else
-    tester.test5(atoi(argv[1]));
-  
+    tester.test4(atoi(argv[1]), atoi(argv[2]), atoi(argv[3]));
 //  if(argc != 2)
 //    std::cerr << "Wrong nr of params!\n";
 //  else

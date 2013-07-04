@@ -21,7 +21,7 @@
 /*
  * 
  *
- *  Created on: Sep 14, 2011
+ *  Created on: May 11, 2013
  *      Author: cyranka
  */
 #include <time.h>
@@ -36,7 +36,7 @@
 #if __FILIB__
   typedef capd::filib::Interval<DOUBLE> Interval;
 #else
-  typedef capd::intervals::Interval<DOUBLE, capd::rounding::IntRounding> Interval;
+  typedef capd::intervals::Interval<DOUBLE> Interval;
   #define PI Interval::pi()
 //  typedef DOUBLE Interval;
 //  #define PI 3.1415926535897932384626433832795
@@ -119,13 +119,18 @@ void calculateDiams(const IntervalVector& v, Interval& maxD){
   generalDebug << "\n";
 }
 
+/**ATTENTION: THE PADDING METHOD MUST BE USED IN FFT 
+ */
 void inclPOTest(int testNumber, int approach){
-  int m = 23, //change FOJ1D stack dimension
-      M = 69,
+  int m = 25, //change FOJ1D stack dimension
+      M = 75,
       dftPts = 64,
-      dftPts2 = 150,
+      dftPts2 = 250,
       order = 5;
-  Interval nu(0.032),
+  
+  
+  //this are the parameter values considered in [CCP]. The orbit is on the chaotic attractor
+  Interval nu(0.02991), 
            step(0.00015);
 
   ///1.initialize FOJ, the dimension of the first order jet and the initial condition type defined by a DPDEContainer instance
@@ -148,26 +153,26 @@ void inclPOTest(int testNumber, int approach){
   if(testNumber == 0){
     ///3.choose the algorithm type, see enum AlgorithmType in FFTDynSys.h file
     diam = 1e-08;
-    ss << "test1_KSincl_";
+    ss << "test1_KS_unst_incl_";
   }
   if(testNumber == 1){
     ///3.choose the algorithm type, see enum AlgorithmType in FFTDynSys.h file
     diam = 1e-07;
-    ss << "test2_KSincl_";
+    ss << "test2_KS_unst_incl_";
   }
   if(testNumber == 2){
     ///3.choose the algorithm type, see enum AlgorithmType in FFTDynSys.h file
     diam = 1e-06;
-    ss << "test3_KSincl_";
+    ss << "test3_KS_unst_incl_";
   }
   if(testNumber == 3){
     ///3.choose the algorithm type, see enum AlgorithmType in FFTDynSys.h file
     diam = 1e-05;
-    ss << "test4_KSincl_";
+    ss << "test4_KS_unst_incl_";
   }
   if(testNumber == 4){
     diam = 1e-04;
-    ss << "test5_KSincl_";
+    ss << "test5_KS_unst_incl_";
   }
 
   ss  << "diam_" << diam;
@@ -202,131 +207,120 @@ void inclPOTest(int testNumber, int approach){
   Index1D idx;
   RealPolynomialBound u_0(m, M, container), enclosure(m);
   
-  //an another periodic orbit
-  //nu=0.127 stb
-//  idx[0] = 1;
-//  u_0[dpde.mode2array(idx, 0)] =  Interval(0.20121)+r;
-//  idx[0] = 2;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(1.28998)+r;
-//  idx[0] = 3;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(0.20121)+r;
-//  idx[0] = 4;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(-0.377866)+r;
-//  idx[0] = 5;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(-0.0423095)+r;
-//  idx[0] = 6;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(0.0431619)+r;
-//  idx[0] = 7;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(0.00694169)+r;
-//  idx[0] = 8;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(-0.00415743)+r;
-//  idx[0] = 9;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(-0.000796969)+r;
-//  idx[0] = 10;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(0.000331914)+r;
   idx[0] = 1;
-  u_0[idx].im =  Interval(0.350668)+r;
+  u_0[idx].im =  Interval(0.268929)+r;
   idx[0] = 2;
-  u_0[idx].im = Interval(0.0252289)+r;
+  u_0[idx].im = Interval(0.217826)+r;
   idx[0] = 3;
-  u_0[idx].im = Interval(0.350668)+r;
+  u_0[idx].im = Interval(0.268929)+r;
   idx[0] = 4;
-  u_0[idx].im = Interval(-2.27674)+r;
+  u_0[idx].im = Interval(-1.73394)+r;
   idx[0] = 5;
-  u_0[idx].im = Interval(-1.11533)+r;
+  u_0[idx].im = Interval(-1.15828)+r;
   idx[0] = 6;
-  u_0[idx].im = Interval(-0.369307)+r;
+  u_0[idx].im = Interval(-0.745116)+r;
   idx[0] = 7;
-  u_0[idx].im = Interval(0.460388)+r;
+  u_0[idx].im = Interval(0.451721)+r;
   idx[0] = 8;
-  u_0[idx].im = Interval(-0.460455)+r;
+  u_0[idx].im = Interval(-0.217102)+r;
   idx[0] = 9;
-  u_0[idx].im = Interval(-0.311502)+r;
+  u_0[idx].im = Interval(-0.263587)+r;
   idx[0] = 10;
-  u_0[idx].im = Interval(-0.14496)+r;
+  u_0[idx].im = Interval(-0.203271)+r;
   idx[0] = 11;
-  u_0[idx].im = Interval(0.0510489)+r;
+  u_0[idx].im = Interval(0.00102834)+r;
   idx[0] = 12;
-  u_0[idx].im = Interval(-0.021659)+r;
+  u_0[idx].im = Interval(-0.00070666)+r;
   idx[0] = 13;
-  u_0[idx].im = Interval(-0.0341329)+r;
+  u_0[idx].im = Interval(-0.0109867)+r;
   idx[0] = 14;
-  u_0[idx].im = Interval(-0.0261352)+r;
+  u_0[idx].im = Interval(-0.0267955)+r;
   idx[0] = 15;
-  u_0[idx].im = Interval(0.00130753)+r;
+  u_0[idx].im = Interval(-0.00765627)+r;
   idx[0] = 16;
-  u_0[idx].im = Interval(8.74462e-005)+r;
+  u_0[idx].im = Interval(-0.000913737)+r;
   idx[0] = 17;
-  u_0[idx].im = Interval(-0.00211553)+r;
+  u_0[idx].im = Interval(0.000396578)+r;
   idx[0] = 18;
-  u_0[idx].im = Interval(-0.00289166)+r;
+  u_0[idx].im = Interval(-0.00173248)+r;
   idx[0] = 19;
-  u_0[idx].im = Interval(-0.000500848)+r;
+  u_0[idx].im = Interval(-0.00112683)+r;
   idx[0] = 20;
-  u_0[idx].im = Interval(3.35395e-005)+r;
+  u_0[idx].im = Interval(-0.000417885)+r;
   idx[0] = 21;
-  u_0[idx].im = Interval(-4.42524e-005)+r;
+  u_0[idx].im = Interval(3.42432e-05)+r;
   idx[0] = 22;
-  u_0[idx].im = Interval(-0.000228317)+r; 
+  u_0[idx].im = Interval(-5.5054e-05)+r; 
   idx[0] = 23;
-  u_0[idx].im = Interval(-9.03847e-005)+r;
-  u_0[24] = -8.072115e-05 + r;// 1.308558e-04*unit;   
-  u_0[25] = 4.061472e-08 + r;// 9.198090e-05*unit;   
-  u_0[26] = -1.771179e-05 + r;//3.554454e-05*unit; 
-  u_0[27] = 2.160790e-08 + r;//2.349743e-05*unit;
-  u_0[28] = -7.683240e-06 + r;//1.260077e-05*unit;   
-  u_0[29] = 2.596207e-08 + r;//9.292410e-06*unit;
-  u_0[30] = -2.010571e-06 + r;//3.919528e-06*unit;
-  u_0[31] = 6.457350e-10 + r;//2.345435e-06*unit;
-  u_0[32] = -6.027532e-07 + r;//1.234009e-06*unit;
-  u_0[33] = -1.827155e-10 + r;//9.444884e-07*unit;
-  u_0[34] = -1.912217e-07 + r;//4.313323e-07*unit;
-  u_0[35] = 3.132762e-10 + r;//2.868533e-07*unit;
-  u_0[36] = -4.913630e-08 + r;//1.266784e-07*unit;
-  u_0[37] = -9.639931e-11 + r;//8.683696e-08*unit;
-  u_0[38] = -1.765817e-08 + r;//4.377705e-08*unit;
-  u_0[39] = 5.956034e-11 + r;//2.952584e-08*unit;
-  u_0[40] = -4.319419e-09 + r;//1.356505e-08*unit;
-  u_0[41] = -5.973398e-13 + r;//8.370721e-09*unit;
-  u_0[42] = -1.504751e-09 + r;//4.220192e-09*unit;
-  u_0[43] = 1.344236e-12 + r;//2.861523e-09*unit;
-  u_0[44] = -3.968956e-10 + r;//1.380749e-09*unit;  
-  u_0[45] = 1.644704e-12 + r;//8.409932e-10*unit;
-  u_0[46] = -1.194526e-10 + r;//4.089145e-10*unit;
-  u_0[47] = 5.600085e-14 + r;//2.657488e-10*unit;
-  u_0[48] = -3.735948e-11 + r;//1.302601e-10*unit;
-  u_0[49] = 6.923386e-14 + r;//8.303362e-11*unit;
-  u_0[50] = -1.115027e-11 + r;//3.944118e-11*unit;
-  u_0[51] = 7.625038e-15 + r;//2.587359e-11*unit;
-  u_0[52] = -3.235955e-12 + r;//1.367747e-11*unit;
-  u_0[53] = 5.355447e-15 + r;//9.556918e-12*unit;
-  u_0[54] = -8.851600e-13 + r;//6.710554e-12*unit;
-  u_0[55] = 8.157066e-15 + r;//7.432209e-12*unit;
-  u_0[56] = -2.575738e-13 + r;//1.124376e-11*unit;
-  u_0[57] = -1.227735e-14 + r;//1.289762e-11*unit;
-  u_0[58] = -7.847187e-14 + r;//2.020907e-11*unit;
-  u_0[59] = -9.994174e-16 + r;//2.716484e-11*unit;
-  u_0[60] = -2.302107e-14 + r;//5.846583e-11*unit;
-  u_0[61] = -1.752133e-15 + r;//7.916104e-11*unit;
-  u_0[62] = -6.511992e-15 + r;//1.314991e-10*unit;
-  u_0[63] = -3.185013e-16 + r;//1.656574e-10*unit;
-  u_0[64] = -1.860478e-15 + r;//2.432627e-10*unit;
-  u_0[65] = 1.817169e-16 + r;//3.177145e-10*unit;
-  u_0[66] = -5.958659e-16 + r;//4.635467e-10*unit;
-  u_0[67] = -3.186116e-17 + r;//4.507650e-10*unit;
-  u_0[68] = -1.644389e-16 + r;//3.785445e-10*unit;
-  u_0[69] = -8.100358e-18 + r;//3.550455e-10*unit;
+  u_0[idx].im = Interval(-8.2428e-05)+r;
+  idx[0] = 24;
+  u_0[idx].im = Interval(-5.72438e-05)+r;
+  idx[0] = 25;
+  u_0[idx].im = Interval(-9.69028e-06)+r;
+  
+  
+  u_0[26] = -3.576929e-05 + r;
+  u_0[27] = 1.398043e-07 + r;
+  u_0[28] = -1.004207e-05 + r;
+  u_0[29] = 5.541160e-08 + r;
+  u_0[30] = -3.411275e-06 + r;
+  u_0[31] = 9.474237e-09 + r;
+  u_0[32] = -1.116238e-06 + r;
+  u_0[33] = 4.014312e-09 + r;
+  u_0[34] = -2.909364e-07 + r;
+  u_0[35] = 1.640397e-09 + r;
+  u_0[36] = -1.026859e-07 + r;
+  u_0[37] = 4.643364e-10 + r;
+  u_0[38] = -3.167789e-08 + r;
+  u_0[39] = 1.921545e-10 + r;
+  u_0[40] = -9.813174e-09 + r;
+  u_0[41] = 5.510014e-11 + r;
+  u_0[42] = -3.214223e-09 + r;
+  u_0[43] = 1.729007e-11 + r;
+  u_0[44] = -9.170883e-10 + r;
+  u_0[45] = 5.777833e-12 + r;
+  u_0[46] = -2.778709e-10 + r;
+  u_0[47] = 1.481838e-12 + r;
+  u_0[48] = -8.266239e-11 + r;
+  u_0[49] = 4.982945e-13 + r;
+  u_0[50] = -2.489663e-11 + r;
+  u_0[51] = 1.586148e-13 + r;
+  u_0[52] = -8.329328e-12 + r;
+  u_0[53] = 5.179451e-14 + r;
+  u_0[54] = -2.642210e-12 + r;
+  u_0[55] = 1.759783e-14 + r;
+  u_0[56] = -7.666569e-13 + r;
+  u_0[57] = 5.332019e-15 + r;
+  u_0[58] = -2.443670e-13 + r;
+  u_0[59] = 2.052596e-15 + r;
+  u_0[60] = -7.122830e-14 + r;
+  u_0[61] = 3.418136e-15 + r;
+  u_0[62] = -2.286871e-14 + r;
+  u_0[63] = 2.683071e-15 + r;
+  u_0[64] = -6.570857e-15 + r;
+  u_0[65] = 7.687055e-16 + r;
+  u_0[66] = -2.067558e-15 + r;
+  u_0[67] = 2.268319e-16 + r;
+  u_0[68] = -5.922949e-16 + r;
+  u_0[69] = 2.318853e-17 + r;
+  u_0[70] = -1.915800e-16 + r;
+  u_0[71] = 1.963924e-17 + r;
+  u_0[72] = -5.517140e-17 + r;
+  u_0[73] = 2.401302e-18 + r;
+  u_0[74] = -1.741311e-17 + r;
+  u_0[75] = 5.526748e-19 + r;
+  
   u_0.setToRealValuedOdd();
-  setC(u_0, 5.039534e+15);
+  setC(u_0, 9.227553e+15);
   setS(u_0, 12);
   log << "initial condition (infinite dimensional):\n" << u_0 << "\nitegration started, the output below is the Galerkin projection of the set at each timestep\n";
-  double retTime = 4.093009e-001;
+  double retTime = 4.490232e-01;
   int i;
   InclRect2Set set(u_0);
   IntervalMatrix mx(m, m);
   Interval max;
   int STEPS// = 100;
-  		   = 4092;
+         = 4092;
            //=1;
 
   start = clock();
@@ -351,10 +345,10 @@ void inclPOTest(int testNumber, int approach){
 }
 
 void basicPOTest(int testNumber, int approach){
-  int m = 23, //change FOJ1D stack dimension
-      M = 48,
+  int m = 25, //change FOJ1D stack dimension
+      dftPts = 80,
       order = 5;
-  Interval nu(0.032),
+  Interval nu(0.02991),
            step(0.00015);
 
   ///1.initialize FOJ, the dimension of the first order jet and the initial condition type defined by a DPDEContainer instance
@@ -369,7 +363,7 @@ void basicPOTest(int testNumber, int approach){
 
   clock_t start, end;
   
-  FFTDynSys dynsys( m, M, step, order, PI, nu);
+  FFTDynSys dynsys( m, dftPts, step, order, PI, nu);
   
   double diam;
   capd::auxil::OutputStream log(std::cout, false, true);
@@ -429,76 +423,58 @@ void basicPOTest(int testNumber, int approach){
   Index1D idx;
   RealPolynomialBound u_0(m), enclosure(m);
   
-  //an another periodic orbit
-  //nu=0.127 stb
-//  idx[0] = 1;
-//  u_0[dpde.mode2array(idx, 0)] =  Interval(0.20121)+r;
-//  idx[0] = 2;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(1.28998)+r;
-//  idx[0] = 3;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(0.20121)+r;
-//  idx[0] = 4;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(-0.377866)+r;
-//  idx[0] = 5;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(-0.0423095)+r;
-//  idx[0] = 6;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(0.0431619)+r;
-//  idx[0] = 7;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(0.00694169)+r;
-//  idx[0] = 8;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(-0.00415743)+r;
-//  idx[0] = 9;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(-0.000796969)+r;
-//  idx[0] = 10;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(0.000331914)+r;
   idx[0] = 1;
-  u_0[idx].im =  Interval(0.350668)+r;
+  u_0[idx].im =  Interval(0.268929)+r;
   idx[0] = 2;
-  u_0[idx].im = Interval(0.0252289)+r;
+  u_0[idx].im = Interval(0.217826)+r;
   idx[0] = 3;
-  u_0[idx].im = Interval(0.350668)+r;
+  u_0[idx].im = Interval(0.268929)+r;
   idx[0] = 4;
-  u_0[idx].im = Interval(-2.27674)+r;
+  u_0[idx].im = Interval(-1.73394)+r;
   idx[0] = 5;
-  u_0[idx].im = Interval(-1.11533)+r;
+  u_0[idx].im = Interval(-1.15828)+r;
   idx[0] = 6;
-  u_0[idx].im = Interval(-0.369307)+r;
+  u_0[idx].im = Interval(-0.745116)+r;
   idx[0] = 7;
-  u_0[idx].im = Interval(0.460388)+r;
+  u_0[idx].im = Interval(0.451721)+r;
   idx[0] = 8;
-  u_0[idx].im = Interval(-0.460455)+r;
+  u_0[idx].im = Interval(-0.217102)+r;
   idx[0] = 9;
-  u_0[idx].im = Interval(-0.311502)+r;
+  u_0[idx].im = Interval(-0.263587)+r;
   idx[0] = 10;
-  u_0[idx].im = Interval(-0.14496)+r;
+  u_0[idx].im = Interval(-0.203271)+r;
   idx[0] = 11;
-  u_0[idx].im = Interval(0.0510489)+r;
+  u_0[idx].im = Interval(0.00102834)+r;
   idx[0] = 12;
-  u_0[idx].im = Interval(-0.021659)+r;
+  u_0[idx].im = Interval(-0.00070666)+r;
   idx[0] = 13;
-  u_0[idx].im = Interval(-0.0341329)+r;
+  u_0[idx].im = Interval(-0.0109867)+r;
   idx[0] = 14;
-  u_0[idx].im = Interval(-0.0261352)+r;
+  u_0[idx].im = Interval(-0.0267955)+r;
   idx[0] = 15;
-  u_0[idx].im = Interval(0.00130753)+r;
+  u_0[idx].im = Interval(-0.00765627)+r;
   idx[0] = 16;
-  u_0[idx].im = Interval(8.74462e-005)+r;
+  u_0[idx].im = Interval(-0.000913737)+r;
   idx[0] = 17;
-  u_0[idx].im = Interval(-0.00211553)+r;
+  u_0[idx].im = Interval(0.000396578)+r;
   idx[0] = 18;
-  u_0[idx].im = Interval(-0.00289166)+r;
+  u_0[idx].im = Interval(-0.00173248)+r;
   idx[0] = 19;
-  u_0[idx].im = Interval(-0.000500848)+r;
+  u_0[idx].im = Interval(-0.00112683)+r;
   idx[0] = 20;
-  u_0[idx].im = Interval(3.35395e-005)+r;
+  u_0[idx].im = Interval(-0.000417885)+r;
   idx[0] = 21;
-  u_0[idx].im = Interval(-4.42524e-005)+r;
+  u_0[idx].im = Interval(3.42432e-05)+r;
   idx[0] = 22;
-  u_0[idx].im = Interval(-0.000228317)+r;
+  u_0[idx].im = Interval(-5.5054e-05)+r; 
   idx[0] = 23;
-  u_0[idx].im = Interval(-9.03847e-005)+r;
+  u_0[idx].im = Interval(-8.2428e-05)+r;
+  idx[0] = 24;
+  u_0[idx].im = Interval(-5.72438e-05)+r;
+  idx[0] = 25;
+  u_0[idx].im = Interval(-9.69028e-06)+r;
   
-  double retTime = 4.093009e-001;
+  double retTime = 4.490232e-01;
   int i;
   C0Set set(u_0, 1);
   IntervalMatrix mx(m, m);
@@ -530,7 +506,7 @@ int main(int argc, char * argv[]){
 //  MpFloat::setDefaultPrecision(100);
   setLoggers();
   if(argc != 4){
-    std::cerr << "Number of arguments wrong.\nUsage: ./KSPOTest [projection|inclusion] test_number approach_number\n" << 
+    std::cerr << "Number of arguments wrong.\nUsage: ./KSUnstPOTest [projection|inclusion] test_number approach_number\n" << 
                  "if \"projection\" is specified then the Galerkin projection is integrated, when \"inclusion\" is specified the " <<
                  "whole system is integrated (using the Lohner algorithm for inclusions)" <<
                  "\n test_number is the test index, which corresponds to the index provided in Figure 1.18 and 1.19," <<
@@ -542,7 +518,7 @@ int main(int argc, char * argv[]){
       if(strcmp(argv[1], "inclusion")==0){
         inclPOTest(atoi(argv[2]), atoi(argv[3]));
       }else{
-        std::cerr << "Number of arguments too small.\nUsage: ./KSPOTest [projection|inclusion] test_number approach_number\n" << 
+        std::cerr << "Number of arguments too small.\nUsage: ./KSUnstPOTest [projection|inclusion] test_number approach_number\n" << 
                  "if \"projection\" is specified then the Galerkin projection is integrated, when \"inclusion\" is specified the " <<
                  "whole system is integrated (using the Lohner algorithm for inclusions)" <<
                  "\n test_number is the test index, which corresponds to the index provided in Figure 1.18 and 1.19," <<
@@ -552,4 +528,3 @@ int main(int argc, char * argv[]){
   }
   FOJ1D::destroy();
 }
-

@@ -1,0 +1,9 @@
+set xtics (19,24,29,34,39,44,49,54,59,64,69,74,79,84,89,94,99)
+plot './compl_res_Taylor/fftOpCnt_KS.txt' using ($1==5 ? $2 : 1/0):($2<100 ? $3*1e+06 : 1/0) w l title 'FFT approach'
+replot './compl_res_Lohner_Taylor/fftOpCnt_KS.txt' using ($1==5 ? $2 : 1/0):($2<100 ? $3*1e+06 : 1/0) w l title 'full Lohner algorithm step based on FFT approach'
+replot './compl_res_Lohner_Taylor/directOpCnt_KS.txt' using ($1==5 ? $2 : 1/0):($2<100 ? $3*1e+06 : 1/0) w l title 'full Lohner algorithm step based on direct approach'
+replot './compl_res_Taylor/directOpCnt_KS.txt' using ($1==5 ? $2 : 1/0):($2<100 ? $3*1e+06 : 1/0) w l title 'direct approach'
+set term pdf size 10,6
+set output 'lohner.pdf'
+replot
+set output
