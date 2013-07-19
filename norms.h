@@ -1,23 +1,3 @@
-/*  dPDEs - this program is an open research software performing rigorous integration in time of partial differential equations
-    Copyright (C) 2010-2013  Jacek Cyranka
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-    
-    Please consult the webpage www.cyranka.net,
-    or contact me on jcyranka@gmail.com for further details.
-*/
-
 /*
  * norms.h
  *
@@ -40,8 +20,25 @@ class EuclideanNorm{
 public:
   typedef IndexT IndexType;
 
-  const double squareNorm(const IndexType& k) const{
+  template <class ScalarType>
+  static ScalarType norm(const IndexType& k){
+    return sqrt(k.squareEuclNorm());
+  }
+
+  static int squareNorm(const IndexType& k){
     return k.squareEuclNorm();
+  }
+
+  template <class ScalarType>
+  static ScalarType harmonic1DBound(const ScalarType& start, int s){
+    return (1. / (s - 1.)) * power(1. / start, s - 1.);
+  }
+
+  template <class ScalarType>
+  static ScalarType harmonic2DBound(const ScalarType& start, int s){
+    ScalarType sqrt2 = ScalarType(1.414213562373093, 1.414213562373095),
+               cd = 2 * ScalarType::pi(); //a constant depending on the dimension
+    return power((1 + sqrt2 /(2 * start)), s) * (cd / (s-2)) * power((start - sqrt2 / 2.), -(s-2)); //this line is hard-coded for 2D
   }
 
 };
@@ -52,8 +49,20 @@ class MaximumNorm{
 public:
   typedef IndexT IndexType;
 
-  const double squareNorm(const IndexType& k) const{
-    double k0sq = k[0] * k[0],
+  static int norm(const IndexType& k){
+    int max = 0;
+    int t;
+    if((t = abs(k[0])) > max)
+      max = t;
+    if((t = abs(k[1])) > max)
+      max = t;
+    if((t = abs(k[2])) > max)
+      max = t;
+    return max;
+  }
+
+  static int squareNorm(const IndexType& k){
+    int k0sq = k[0] * k[0],
            k1sq = k[1] * k[1],
            k2sq = k[2] * k[2],
            max=0;
@@ -65,6 +74,23 @@ public:
       max = k2sq;
     return max;
   }
+
+
+
+  template <class ScalarType>
+  static ScalarType harmonic1DBound(const ScalarType& start, int s){
+    return (1. / (s - 1.)) * power(1. / start, s - 1.);
+  }
+
+  template <class ScalarType>
+  static ScalarType harmonic2DBound(const ScalarType& start, int s){
+    if(s <= 2){
+      std::cerr << "harmonic2DBound in MaximumNorm class can not be called with s <= 2\n";
+      throw std::runtime_error("harmonic2DBound in MaximumNorm class can not be called with s <= 2\n");
+    }
+    return (2 * 2) / ((s - 2) * power((start - 1), s - 2 - 1)) ;
+  }
+
 };
 
 }

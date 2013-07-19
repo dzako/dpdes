@@ -1,23 +1,3 @@
-/*  dPDEs - this program is an open research software performing rigorous integration in time of partial differential equations
-    Copyright (C) 2010-2013  Jacek Cyranka
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-    
-    Please consult the webpage www.cyranka.net,
-    or contact me on jcyranka@gmail.com for further details.
-*/
-
 /*
  * OperationsCountKS.cpp
  *
@@ -50,8 +30,8 @@
 #include "Pair.h"
 
 #include "Odd.h"
-#include "dynset/C0Rect2Set.hpp"
-#include "dynset/C0Rect2RSet.hpp"
+#include "capd/dynset/C0Rect2Set.hpp"
+#include "capd/dynset/C0Rect2RSet.hpp"
 
 #include "FFT.h"
 #include "Equations.h"
@@ -106,12 +86,10 @@ capd::auxil::OutputStream directApproachOperationsCount(std::cout, false, true);
 int ns[100];
 int ms[100];
 int orders[100];
-
-/**HERE YOU SET WHICH VALUES TO USE IN TESTS*/
 const int starti = 3, 
-          endi = 25,
+          endi = 20,
           startio = 0,
-          endio = 7;
+          endio = 0;
 
 void initTables(){
   
@@ -138,19 +116,18 @@ void initTables(){
   ns[22] = 129; ms[22] = 288;
   ns[23] = 139; ms[23] = 288;
   ns[24] = 149; ms[24] = 300;
-  ns[25] = 159; ms[25] = 320;
+/*  ns[25] = 159; ms[25] = 320;
   ns[26] = 169; ms[26] = 360;
   ns[27] = 179; ms[27] = 360;
-/*  ns[28] = 189; ms[28] = 400;
+  ns[28] = 189; ms[28] = 400;
   ns[29] = 199; ms[29] = 400;
-  ns[30] = 249; ms[30] = 500;
-  
-  ns[31] = 299; ms[31] = 600;
-  
-  ns[32] = 349; ms[32] = 750;
-  
+  ns[30] = 299; ms[30] = 600;
+  ns[31] = 399; ms[31] = 800;
   ns[32] = 499; ms[32] = 1000;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       ns[36] = ; ms[36] = ;
+  ns[33] = ; ms[33] = ;
+  ns[34] = ; ms[34] = ;
+  ns[35] = ; ms[35] = ;
+  ns[36] = ; ms[36] = ;
   ns[37] = ; ms[37] = ;
   ns[38] = ; ms[38] = ;
   ns[39] = ; ms[39] = ;*/
@@ -182,15 +159,15 @@ int main(){
            m = ms[i],
            order = orders[j];
        std::cout << "n=" << n << ", m=" << m << ", order=" << order << "\n";
-       Interval nu(0.032),
-                step(0.00015);    
-       
+       Interval nu(0.1), //this was chosen empirically such that set will decrease by 10% at the time 1
+                step(0.0001);
+    
        ///begin FOJ initialization for FFT integrator
        capd::jaco::DPDEContainer container;
        ///2.set here the subspace of the initial condition e.g. setToRealValuedOdd means that the initial condition is real valued odd
-       container.setToRealValuedOdd();
-       FOJ1D::initialize(ModesContainer1D::modes2arraySizeStatic(n), container);
-       ///end FOJ initialization 
+       container.setToRealValued();
+       FOJ1D::initialize(ModesContainer1D::modes2arraySizeStatic(m), container);
+       ///end FOJ initialization   
     
        FFTDynSys dynsys( n, m, step, order, PI, nu);
     
@@ -218,9 +195,8 @@ int main(){
        set = C0Set(u_0, 1);             
        for(i=0; i < 1; ++i){    
          set.move(dynsys);
-       }
-       directApproachOperationsCount << order << " " << n << " " << " " << RRmultiplicationsSum / 1e+06 << " " << RRadditionsSum / 1e+06 << "\n";
-                
+       }    
+       directApproachOperationsCount << order << " " << n << " " << " " << RRmultiplicationsSum / 1e+06 << " " << RRadditionsSum / 1e+06 << "\n";         
     } 
     fftApproachOperationsCount << "\n";
     directApproachOperationsCount << "\n";

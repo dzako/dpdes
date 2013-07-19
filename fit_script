@@ -1,4 +1,4 @@
 f(x)=a*x*log(x)+b
 g(x)=a*x
-efit f(x) './fftOpCnt_Burgers.txt' using ($1==4 ? $2 : 1/0):($2>40 ? $3*1e+06 : 1/0) via a,b
+fit f(x) './fftOpCnt_Burgers.txt' using ($1==4 ? $2 : 1/0):($2>40 ? $3*1e+06 : 1/0) via a,b
 fit g(x) './fits_Burgers.txt' via a

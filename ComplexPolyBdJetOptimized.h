@@ -1,23 +1,3 @@
-/*  dPDEs - this program is an open research software performing rigorous integration in time of partial differential equations
-    Copyright (C) 2010-2013  Jacek Cyranka
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-    
-    Please consult the webpage www.cyranka.net,
-    or contact me on jcyranka@gmail.com for further details.
-*/
-
 /*
  * HalfspaceModesContainer.h
  *
@@ -38,7 +18,7 @@ namespace jaco{
 
 /**
  * Finite dimensional vector (optimized for jets)
- * D is an overestimate of the ve ctor size.
+ * D is an overestimate of the vector size.
  */
 template< class IntervalT, class ScalarT, class IndexT, /*int N,*/ int D,          
           class SubspaceT = capd::jaco::Real<IntervalT, IndexT, capd::jaco::MaximumNorm<IndexT> > >
@@ -79,7 +59,7 @@ public:
   ComplexPolyBdJetOptimized() : infiniteDimensional(false){
   }
 
-  ComplexPolyBdJetOptimized(int n_, int d_) : SubspaceType(d_, d_), n(n_), d(d_), m_lowerHalfspace(d), m_upperHalfspace(d),
+  ComplexPolyBdJetOptimized(int n_, int d_) : SubspaceType(n_, n_), n(n_), d(d_), m_lowerHalfspace(d_), m_upperHalfspace(d_),
       realContainer(modes2realArraySizeStatic(n_)), infiniteDimensional(false){
     irProjection.setRange(0, capd::jaco::weak, n, capd::jaco::weak);
     irFiniteTail.setRange(n, capd::jaco::strong, n, capd::jaco::weak);
@@ -89,7 +69,7 @@ public:
     ir = irProjection;
   }
 
-  ComplexPolyBdJetOptimized(int n_) : SubspaceType(modes2arraySizeStatic(n_), modes2arraySizeStatic(n_)), n(n_), d(modes2arraySizeStatic(n_)),
+  ComplexPolyBdJetOptimized(int n_) : SubspaceType(n_, n_), n(n_), d(modes2arraySizeStatic(n_)),
       m_lowerHalfspace(modes2arraySizeStatic(n_)), m_upperHalfspace(modes2arraySizeStatic(n_)), realContainer(modes2realArraySizeStatic(n_)), infiniteDimensional(false){
     irProjection.setRange(0, capd::jaco::weak, n, capd::jaco::weak);
     irFiniteTail.setRange(n, capd::jaco::strong, n, capd::jaco::weak);
@@ -186,15 +166,15 @@ public:
     return *this;
   }
 
-  inline ComplexPolyBdJetOptimized& operator+=(const RealVectorType& v){
-    IndexType index;
+  inline ComplexPolyBdJetOptimized& operator+=(const RealVectorType& v){    
+    IndexType index;    
     for(index = firstModeIndex(ir); !index.limitReached(ir); index.inc(ir)){
       (*this)[index] += mode(index, v);
     }
     return *this;
   }
 
-  inline ComplexPolyBdJetOptimized& operator+=(const ComplexPolyBdJetOptimized& hmc){
+  inline ComplexPolyBdJetOptimized& operator+=(const ComplexPolyBdJetOptimized& hmc){    
     (DPDEContainerType&)*this += (DPDEContainerType&)hmc;
     m_upperHalfspace += hmc.m_upperHalfspace;
     m_lowerHalfspace += hmc.m_lowerHalfspace;
@@ -249,26 +229,30 @@ public:
    */
   inline void assignRealContainer(){
     IndexType index;
-    for(index = firstModeIndex(ir); !index.limitReached(ir); index.inc(ir)){
+    for(index = firstModeIndex(ir); !index.limitReached(ir); index.inc(ir)){      
       setMode(index, (*this)[index].secondFreeCoeff(), realContainer);
     }
   }
 
   inline operator const RealVectorType&(){
-    assignRealContainer();
+    assignRealContainer();    
     return realContainer;
   }
-
+  
   inline void monodromyMatrix(RealMatrixType& m){
     int i, j;
     QuadMatrixType p;
-    for(i=0; i <= n; ++i)
-      for(j=0; j <= n; ++j){
+    for(i=0; i < d; ++i)
+      for(j=0; j < d; ++j){
         if(i == j && j == 0 && a0IsConstant){
           p[0][0] = 1; p[0][1] = 0; p[1][0] = 0; p[1][1] = 1;
         }else
           p = m_upperHalfspace[i].variationalPart(j);
-        setDerivative(i, j, p, m);
+        setDerivative(i, j, p, m); 
+        //method from the SubspaceType must be called 
+        //\frac{\partial a_i}{\partial a_j} is set here for matrix m
+        //(for only real modes \frac{\partial a_i}{\partial a_j} is a 2x2 matrix, for odd,even 
+        //\frac{\partial a_i}{\partial a_j} is only a 1x1 matrix)
       }
   }
 
@@ -298,7 +282,7 @@ public:
 
   inline ComplexPolyBdJetOptimized& operator=(const RealVectorType& rvt){
     IndexType index;
-    for(index = firstModeIndex(ir); !index.limitReached(ir); index.inc(ir)){
+    for(index = firstModeIndex(ir); !index.limitReached(ir); index.inc(ir)){        
         empty.setFreeCoeff(mode(index, rvt));
         set(index, empty); //here we need to set a ScalarType with zero variational part (empty is ok)
         if(index.isZero()){
@@ -309,8 +293,12 @@ public:
     return *this;
   }
 
+  //TODO: IMPORTANT - this is exactly what the C++ predefined operator is doing
+  //check if the C++ predefined operator is calling (DPDEContainer&)*this = (DPDEContainer&)hmc; 
+  //and (SubspaceType&)*this = (SubspaceType&)hmc; 
   inline ComplexPolyBdJetOptimized& operator=(const ComplexPolyBdJetOptimized& hmc){
     (DPDEContainer&)*this = (DPDEContainer&)hmc;
+    (SubspaceType&)*this = (SubspaceType&)hmc;
     n = hmc.n;
     d = hmc.d;
     irProjection = hmc.irProjection;
@@ -475,6 +463,39 @@ public:
     }
   }
 
+  inline bool subset(ComplexPolyBdJetOptimized& pb2){
+    bool r = true;
+    int i;
+    std::cout << "d=" << d << "\n";
+    for(i=0; i < d; i++){
+      if(!m_upperHalfspace[i].re.subset(pb2.m_upperHalfspace[i].re)){
+        r = false;
+        std::cout << m_upperHalfspace[i].re << " " << pb2.m_upperHalfspace[i].re << "\n";
+      }
+      if(!m_upperHalfspace[i].im.subset(pb2.m_upperHalfspace[i].im)){
+        r = false;
+        std::cout << m_upperHalfspace[i].im << " " << pb2.m_upperHalfspace[i].im << "\n";
+      }
+      if(!m_lowerHalfspace[i].re.subset(m_lowerHalfspace[i].re)){
+        r = false;
+        std::cout << m_upperHalfspace[i].re << " " << pb2.m_upperHalfspace[i].re << "\n";
+      }
+      if(!m_lowerHalfspace[i].im.subset(m_lowerHalfspace[i].im)){
+        r = false;
+        std::cout << m_upperHalfspace[i].im << " " << pb2.m_upperHalfspace[i].im << "\n";
+      }
+    }
+    return r;
+  }
+  
+  inline void abs_supremum(ComplexPolyBdJetOptimized& abs){
+    int i;
+    for(i=0; i < d; i++){
+      abs.m_upperHalfspace[i] = m_upperHalfspace[i].abs_supremum();
+      abs.m_lowerHalfspace[i] = m_lowerHalfspace[i].abs_supremum();
+    }
+  }
+  
   void clean(){}
 
   /**Returns maximal diameter of the modes stored within the container.
@@ -514,16 +535,16 @@ public:
       return avgDiam / dimension();
     else
       return avgDiam / (2 * dimension());
-  }
-
+  }  
+  
   friend std::ostream& operator<<(std::ostream& out, const ComplexPolyBdJetOptimized& c){
     out << "ComplexPolyBdJetOptimized\n" << (DPDEContainer&)c << "\n";
     IndexType index;
-    for(index = c.firstModeIndex(c.irProjection); !index.limitReached(c.irProjection); index.inc(c.irProjection)){
+    for(index = c.firstModeIndex(c.irProjection); !index.limitReached(c.irProjection); index.inc(c.irProjection)){      
       out << index << ": " << c[index] << "\n";
     }
     out << "conjugate part:\n";
-    for(index = c.firstModeIndex(c.irProjection); !index.limitReached(c.irProjection); index.inc(c.irProjection)){
+    for(index = c.firstModeIndex(c.irProjection); !index.limitReached(c.irProjection); index.inc(c.irProjection)){      
       out << -index << ": " << c[-index] << "\n";
     }
     return out;
@@ -559,7 +580,6 @@ public:
   using SubspaceType::setDerivative;
 
 };
-
 
 
 }

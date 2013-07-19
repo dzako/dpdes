@@ -1,23 +1,3 @@
-/*  dPDEs - this program is an open research software performing rigorous integration in time of partial differential equations
-    Copyright (C) 2010-2013  Jacek Cyranka
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-    
-    Please consult the webpage www.cyranka.net,
-    or contact me on jcyranka@gmail.com for further details.
-*/
-
 /*
  * 
  *
@@ -32,11 +12,13 @@
 #include "capd/intervals/Interval.hpp"
 #include "config.h"
 
-#define DOUBLE long double
+#define DOUBLE double
 #if __FILIB__
   typedef capd::filib::Interval<DOUBLE> Interval;
+  #define PI Interval::pi()
 #else
-  typedef capd::intervals::Interval<DOUBLE, capd::rounding::IntRounding> Interval;
+  typedef capd::rounding::IntRounding IntRounding;
+  typedef capd::intervals::Interval<DOUBLE> Interval;
   #define PI Interval::pi()
 //  typedef DOUBLE Interval;
 //  #define PI 3.1415926535897932384626433832795
@@ -122,7 +104,7 @@ void calculateDiams(const IntervalVector& v, Interval& maxD){
 void inclPOTest(int testNumber, int approach){
   int m = 23, //change FOJ1D stack dimension
       M = 69,
-      dftPts = 64,
+      dftPts = 48,
       dftPts2 = 150,
       order = 5;
   Interval nu(0.032),
@@ -181,8 +163,6 @@ void inclPOTest(int testNumber, int approach){
   time_t rawtime;
   time ( &rawtime );
   log << "The current local time is: " << ctime (&rawtime) << "\n";
-  log << "Taylor method order=" << order << ", constant time step=" << step << "\n";
-  log << "Galerkin projection dimension m=" << m << ", M_{FFT}=" << dftPts << "\n";
   log << "the whole infinite dimensional system is being integrated (the Lohner algorithm for differential inclusions is used).\n";
   if(approach == 0){
     diffIncl.getDynamicalSystem().setJetDynSysAlgorithmType(capd::jaco::direct);

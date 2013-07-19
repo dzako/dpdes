@@ -1,7 +1,6 @@
 # a list of all the programs in your project 
-PROGS = FFTTests BurgersFPTest KSPOTest KSUnstPOTest PolyBdTests DPDEContainerTest DiffInclTest SHTest OperationsCountBurgers OperationsCountKS OperationsCountSH interval_test
-#PROGS = KSUnstPOTest KSPOTest
-#PROGS = interval_test
+PROGS = 2DIntegratorTest IndicesTests ExactFFTTest FFTTests PolyBd2DTests KSPOTest
+#PROGS = KSPOTest
 
 # a list of all your units to be linked with your programs (space separated)
 OTHERS =
@@ -12,7 +11,13 @@ CAPDBINDIR =/usr/local/bin/
 # setting compiler and linker flags
 CAPDFLAGS = `${CAPDBINDIR}capd-config --cflags`
 CAPDLIBS = `${CAPDBINDIR}capd-config --libs`
-CXXFLAGS += ${CAPDFLAGS} -O2 -Wall -frounding-math
+CXXFLAGS += ${CAPDFLAGS} -O2 -Wall -D__USE_FILIB__ -frounding-math
+
+#CXXFLAGS += ${CAPDFLAGS} -O2 -Wall -D__USE_FILIB__ -frounding-math -ffloat-store
+#THE FFLOAT-STORE ABOVE MAKES PROGRAM 3 x SLOWER WHEN FILIB INTERVALS WITH ROUNDING ARE USED
+
+#CXXFLAGS += ${CAPDFLAGS} -O0 -Wall -D__USE_FILIB__ -frounding-math
+#THE -O0 FLAG MAKES PROGRAM 5 X SLOWER COMPARED TO -O2
 
 # directory where object and dependancy files will be created
 OBJDIR = .obj/

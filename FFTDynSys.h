@@ -59,19 +59,20 @@ public:
   ModesContainerContainerType modes;
   GridsContainerType grids; ///<DFT grids calculated for each order
 
-  /**
-   * @param initializeHigherDFT if fft's used for calculating convolution for infinite dimensional polybds are calculated
+  /**IMPORTANT: This constructor is used to create a FINITE dimensional integrator (only projection is taken into account)   
    */
-  FFTBasicDynSys(int m_, int dftPts_, IntervalType step_, int order_, IntervalType pi_, IntervalType nu_, bool initializeHigherDFT = true) :
-  EquationTaylorType(m_, 2*m_+1, dftPts_, 2 * dftPts_, nu_, pi_, order_, initializeHigherDFT), m(m_), dftPts(dftPts_), step(step_), order(order_), rhsSeries(m),
+  FFTBasicDynSys(int m_, int dftPts_, IntervalType step_, int order_, IntervalType pi_, IntervalType nu_) :
+  EquationTaylorType(m_, dftPts_, nu_, pi_, order_), m(m_), dftPts(dftPts_), step(step_), order(order_), rhsSeries(m),
   rhsFunctionSpace(dftPts_), td(m), tl(m), modes(order_+1, false), grids(order_+1, false){
     int i;
     for(i=0; i <= order; ++i){
       modes[i] = ModesContainerType(m);
       grids[i] = DFTGridType(dftPts_);
-    }
+    }    
   }
   
+  /**IMPORTANT: This constructor is used to create a INFINITE dimensional integrator (only projection is taken into account)   
+   */
   FFTBasicDynSys(int m_, int dftPts_, int M_, int dftPts2_, IntervalType step_, int order_, IntervalType pi_, IntervalType nu_, bool initializeHigherDFT = true) :
   EquationTaylorType(m_, M_, dftPts_, dftPts2_, nu_, pi_, order, initializeHigherDFT), m(m_), dftPts(dftPts_), step(step_), order(order_), rhsSeries(m),
   rhsFunctionSpace(dftPts_), td(m), tl(m), modes(order_+1, false), grids(order_+1, false){
@@ -88,8 +89,8 @@ public:
 
   template<class VectorType>
   inline void setInitialCondition(VectorType& v){
-    modes[0] = v;
-    ScalarT::setContainer(modes[0]);
+    modes[0] = v;    
+    ScalarT::setContainer(modes[0]);    
   }
 
   inline void calculateGrid2(int i){
@@ -113,7 +114,7 @@ public:
   /** without wrapping effect control*/
   template<class VectorType>
   inline void move( VectorType& in, VectorType& out){
-    setInitialCondition(in);
+    setInitialCondition(in);    
     doStep();
     current(out);
   }
@@ -124,10 +125,10 @@ public:
   inline void doStepFFT(){
     int i;
     ScalarT::switchToComplexValued();
-    ScalarT::switchToGlobalOptimization();        
-    calculateGrid2(0);        
-    generalDebug2 << "modes["<<0<<"] ("<<modes[0].subspaceType<<", "<<modes[0].solutionType<<")="<<modes[0]<<"\n";
+    ScalarT::switchToGlobalOptimization();              
+    calculateGrid2(0);       
     generalDebug2 << "grid["<<0<<"] ("<<grids[0].subspaceType<<", "<<grids[0].solutionType<<")="<<grids[0]<<"\n";
+    generalDebug2 << "modes["<<0<<"] ("<<modes[0].subspaceType<<", "<<modes[0].solutionType<<")="<<modes[0]<<"\n";
     for(i=0; i < order; ++i){       
       rightHandSide( i, grids, modes, rhsSeries, rhsFunctionSpace, (i < order - 1 ? true : false));      
       //this is not needed, because we divide rhsSeries inside rhs function, and then transform to rhsFunctionSpace
@@ -182,7 +183,7 @@ public:
     evaluatePolynomials();
   }
 
-  inline void doStep(){
+  inline void doStep(){    
     switch(algorithmType){
       case direct : doStepDirect(); break;
       case FFT : doStepFFT(); break;
@@ -253,17 +254,20 @@ public:
   DynSysVectorType forcing;
   DynSysVectorType yc;
 
+  
+  /**IMPORTANT: This constructor is used to create a finite dimensional integrator (only projection is taken into account)   
+   */
   FFTTaylorDynSys(int m_, int dftPts_, IntervalType step_, int order_, IntervalType pi_, IntervalType nu_) :
-    basicDynSys(m_, dftPts_, step_, order_ + 1, pi_, nu_), jetDynSys(m_, dftPts_, step_, order_, pi_, nu_, false), x(m_), xx(m_),
+    basicDynSys(m_, dftPts_, step_, order_ + 1, pi_, nu_), jetDynSys(m_, dftPts_, step_, order_, pi_, nu_), x(m_), xx(m_),
     forcing(PolyBdType::modes2realArraySizeStatic(m_)), yc(PolyBdType::modes2realArraySizeStatic(m_)){
     jetDynSys.algorithmType = direct;
     basicDynSys.algorithmType = direct;
   }
   
-  /**This constructor is typically for the differential inclusion. The infinite part is taken into account (that's why M and dftPts2 are needed)
+  /**IMPORTANT: This constructor is for the differential inclusion. The infinite part is taken into account (that's why M and dftPts2 are needed)
    */
   FFTTaylorDynSys(int m_, int dftPts_, int M_, int dftPts2_, IntervalType step_, int order_, IntervalType pi_, IntervalType nu_) : 
-    basicDynSys(m_, dftPts_, M_, dftPts2_, step_, order_ + 1, pi_, nu_), jetDynSys(m_, dftPts_, step_, order_, pi_, nu_, false), x(m_), 
+    basicDynSys(m_, dftPts_, M_, dftPts2_, step_, order_ + 1, pi_, nu_, true), jetDynSys(m_, dftPts_, step_, order_, pi_, nu_), x(m_), 
     xx(m_), forcing(PolyBdType::modes2realArraySizeStatic(m_)), yc(PolyBdType::modes2realArraySizeStatic(m_)){
     jetDynSys.algorithmType = direct;
     basicDynSys.algorithmType = direct;
@@ -271,6 +275,14 @@ public:
   
   void setJetDynSysAlgorithmType(int algorithmType){
     jetDynSys.algorithmType = algorithmType;
+  }
+  
+  void setBasicDynSysAlgorithmType(int algorithmType){    
+    basicDynSys.algorithmType = algorithmType;
+    if(algorithmType == FFT)
+      basicDynSys.useFFT = true;
+    else
+      basicDynSys.useFFT = false;
   }
   
   inline void setSecondInitialCondition(const DynSysVectorType& v){
@@ -298,6 +310,7 @@ public:
     return r;
   }
 
+  
   inline void encloseMap(
       const DynSysVectorType& x,
       const DynSysVectorType& xx,
@@ -306,10 +319,10 @@ public:
       DynSysVectorType& o_rem
   ){
     //IMPORTANT: CAPD compatible part START
-        
+    
     //attention: stupid notation
     //vector xx is in fact the current [x] (values of the solutions of the finite projection) - interval set
-    jetDynSys.setInitialCondition(xx);
+    jetDynSys.setInitialCondition(xx);        
     //vector x is in fact the middle point of the current [x]
     //this middle point is assigned by using the "setSecondInitialCondition()" because in the jets 
     //setInitialCondition() sets the value of current interval set [x] - this value 
@@ -318,30 +331,31 @@ public:
     //setSecondInitialCondition() sets the value of the middle point m([x]) of the current [x], values of the middle    
     //point m([x]) are used to calculate \Phi([x]) and are not multiplied by the partial derivatives, 
     //when jets are multiplied during calculation of \frac{\partial \Phi}{\partial x}. 
-    setSecondInitialCondition(x);        
-//    clock_t start = clock();    
-    W = enclosure(xx);        
-//    clock_t end = clock();
-//    generalDebug << "enc time: "<<(end-start)<<"\n";        
-    basicDynSys.setInitialCondition(W);    
-//    generalDebug << "enc: " << W << "\n";   
-            
-    jetDynSys.doStep(); ///calculates Phi and JacPhi (derivative with respect to initial conditions)    
+    setSecondInitialCondition(x);     
     
+//    clock_t start = clock();    
+    W = enclosure(xx);
+//    clock_t end = clock();
+//    generalDebug << "enc time: "<<(end-start)<<"\n";    
+        
+    basicDynSys.setInitialCondition(W);    
+//    generalDebug << "enc: " << W << "\n";        
+    
+    jetDynSys.doStep(); ///calculates Phi and JacPhi (derivative with respect to initial conditions)    
     //below the Taylor remainder is calculated by using basicDynSys (W the enclosure is the initial condition)
-    basicDynSys.doStep(); ///calculates the remainder    
+    basicDynSys.doStep();
     //below set the internal CAPD representation of the remainder
     basicDynSys.remainder(o_rem);
-    
 //    generalDebug << "rem: " << o_rem << "\n";
-    //below set the internal CAPD representation of \Phi([x])
+    //below set the internal CAPD representation of \Phi([x]) 
     jetDynSys.current(o_phi);
-    generalDebug2 << "current: \n" << o_phi << "\n";
-    //below set the internal CAPD representation of the partial derivative matrix \frac{\partial \Phi([x])}{\partial x
+    //below set the internal CAPD representation of the partial derivative matrix \frac{\partial \Phi([x])}{\partial x} 
     currentD(o_jacPhi);
     
+    // CAPD compatible part END
   }
 
+  
   const DynSysVectorType& enclosure(const DynSysVectorType& in){
     x = in;
     xx = capd::jaco::enclosure(basicDynSys, x, jetDynSys.step);
@@ -383,7 +397,19 @@ public:
     basicDynSys.forcing = f;
     jetDynSys.forcing = f;
   }
-
+  
+  void printGridGnuplotFormat(capd::auxil::OutputStream& out){
+    
+    int i, j;
+    for(i=0; i < jetDynSys.grids[0].m; ++i){
+      for(j=0; j < jetDynSys.grids[0].m; ++j)
+        out << i*2*3.14159265358979323846264338 / double(jetDynSys.grids[0].m) << " " << j*2*3.14159265358979323846264338 / double(jetDynSys.grids[0].m)
+        << " " << leftBound((jetDynSys.grids[0])[i][j].value().re) << " " << 
+        rightBound((jetDynSys.grids[0])[i][j].value().re) << "\n";/* leftBound(c[i][j].re) << " " << rightBound(c[i][j].re) << "\n";*/
+    }
+    out << "\n";
+  }
+  
 };
 
 }

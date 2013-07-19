@@ -1,23 +1,3 @@
-/*  dPDEs - this program is an open research software performing rigorous integration in time of partial differential equations
-    Copyright (C) 2010-2013  Jacek Cyranka
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-    
-    Please consult the webpage www.cyranka.net,
-    or contact me on jcyranka@gmail.com for further details.
-*/
-
 /*
  * ComplexInterval.h
  *
@@ -88,6 +68,32 @@ public:
     r.im = im.mid();
     return r;
   }
+  
+  inline void split(ComplexScalar& c, ComplexScalar& r) const{
+    (*this).re.split(c.re, r.re);
+    (*this).im.split(c.im, r.im);
+  }
+
+  inline ComplexScalar abs() const{
+    ComplexScalar r;
+    r.re = capd::abs(re);
+    r.im = capd::abs(im);
+    return r;
+  }
+
+  inline ComplexScalar supremum() const{
+    ComplexScalar r;
+    r.re = rightBound(re);
+    r.im = rightBound(im);
+    return r;
+  }
+
+  inline ComplexScalar abs_supremum() const{
+    ComplexScalar r;
+    r.re = rightBound(capd::abs(re));
+    r.im = rightBound(capd::abs(im));
+    return r;
+  }
 
   inline ComplexScalar inverse() const{
     ComplexScalar inv;
@@ -156,8 +162,8 @@ public:
   }
 
   inline ScalarType normMax() const{
-    ScalarType max = rightBound(abs(re)), t;
-    if((t = rightBound(abs(im))) > max) max = t;
+    ScalarType max = rightBound(capd::abs(re)), t;
+    if((t = rightBound(capd::abs(im))) > max) max = t;
     return max;
   }
 
@@ -217,7 +223,6 @@ public:
 //  }
 
   friend std::ostream& operator<<(std::ostream& out, const ComplexScalar& c){
-
     //out << "(" << fadbad::val(c.re.val()) << "," << fadbad::val(c.im.val()) << ")"; //TODO: for debug purpose
     out << "(" << c.re << "," << c.im << ") diam (" << diam(c.re) << ", " << diam(c.im) << ")";
     return out;

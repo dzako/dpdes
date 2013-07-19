@@ -1,23 +1,3 @@
-/*  dPDEs - this program is an open research software performing rigorous integration in time of partial differential equations
-    Copyright (C) 2010-2013  Jacek Cyranka
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-    
-    Please consult the webpage www.cyranka.net,
-    or contact me on jcyranka@gmail.com for further details.
-*/
-
 /*
  * Index.h
  *
@@ -190,6 +170,11 @@ public:
     }
     return r;
   }
+
+
+
+
+
 };
 
 enum IncludeZero{withoutZero, withZero};
@@ -198,7 +183,8 @@ class Index{
 public:
   double k[3];///<coordinates are doubles, because we want to compare integer indices with double indices, a result of division
               ///of a index which is not an integer itself.
-  double l;
+  double l;    
+  
   Index() : l(0){
     k[0]=0; k[1]=0; k[2]=0; }
   inline Index(const Index& i2) : l(i2.l){
@@ -232,11 +218,27 @@ public:
 
   virtual int d() const=0;
 
-  inline double squareEuclNorm() const{
-    double r=k[0]*k[0];
+  ///Number of components stored in the index
+  virtual int components() const=0; 
+
+  template<class ScalarType>
+  inline ScalarType euclNorm() const{
+    ScalarType r = (*this).squareEuclNorm();
+    return sqrt(r);
+  }
+  
+  int squareEuclNorm() const{
+    int r=k[0]*k[0];
     if(d()>1) r+=k[1]*k[1];
     if(d()>2) r+=k[2]*k[2];
     return r;
+  }
+
+  inline int maxNorm() const{
+    int max = abs(k[0]);
+    if(d() > 1 && abs(k[1]) > max) max = abs(k[1]);
+    if(d() > 2 && abs(k[2]) > max) max = abs(k[2]);
+    return max;
   }
 
   Index& operator=(const Index& i2){
@@ -288,6 +290,8 @@ public:
 
   inline virtual int d() const{return 1;}
 
+  inline virtual int components() const{ return 1;}
+  
   using Index::operator[];
 
   ///increases the current index by one, and returns true if current index is within range ir.
@@ -351,7 +355,7 @@ public:
     *\sum_{k\in{range}}{\frac{1}{|k_1|^s}}
     *\f]
   */
-  template <class ScalarType, class IndexRangeT>
+  template <class ScalarType, class IndexRangeT, class NormT>
   static ScalarType harmonicSumK_1(const IndexRangeT& range, int s){
     if(!range.k_1UptoInfinity()){
       std::cerr << "forbidden call of harmonicSumK_1 with range which is not upto infinity.\n";
@@ -366,7 +370,7 @@ public:
     *\sum_{k\in{range}}{\frac{1}{|k-k_1|^s}}
     *\f]
   */
-  template <class ScalarType, class IndexRangeT>
+  template <class ScalarType, class IndexRangeT, class NormT>
   static ScalarType harmonicSumKmk_1(const IndexRangeT& range, int s){
     if(!range.kmk_1UptoInfinity()){
       std::cerr << "forbidden call of harmonicSumKmk_1 with range which is not upto infinity.\n";
@@ -444,35 +448,35 @@ inline bool operator>(const Index1D& i1, const Index1D& i2){
 }
 
 
-///TODO: check with set order on 2D indices is OK.
+/**2D Index for one-component functions.
+ * 
+ */
 class Index2D : public Index{
 public:
   Index2D() : Index(){}
+  Index2D(int k0, int k1){
+    k[0] = k0;
+    k[1] = k1;
+  }
   inline Index2D(const Index2D& i2) : Index(i2){}
   inline virtual int d() const{return 2;}
 
-  /**Switches l (component of a mode) during increasing
-   *
-   * @param unconditional if true then the l of the index is not being changed, otherwise it changes cyclically
-   */
+  inline virtual int components() const{ return 1;}
+  
   template<class IndexRangeT>
   inline bool inc(const IndexRangeT& ir, bool unconditional = false){
     Index2D t(*this);
     cast();
-    if(l == 0 && !unconditional)
-      l++;
-    else{
-      if(!unconditional) l=0;
-      do{
-        if(k[0]<ir.moduloM1Index())
-          k[0]++;
-        else{
-          k[1]++;
-          k[0]=ir.returnIndex();
-        }
-        //the last inequality used when noninteger index is increased
-      }while((!ir.withinRange(*this) && (k[1] <= ir.k_1NormRight)) || (*this <= t));
-    }
+    do{
+      if(k[0]<ir.moduloM1Index())
+        k[0]++;
+      else{
+        k[1]++;
+        k[0]=ir.returnIndex();
+      }
+      //the last inequality used when noninteger index is increased
+    }while((!ir.withinRange(*this) && (k[1] <= ir.k_1NormRight)) || (*this <= t));    
+    
     if(ir.withinRange(*this)){
       return true;
     }else{
@@ -484,14 +488,14 @@ public:
   template<class IndexRangeT>
   inline bool limitReached(const IndexRangeT& ir){
     if(ir.k_1orKmk_1)
-      return k[1]>ir.k_1NormRight && (ir.k[1]-k[1])<-ir.kmk_1NormRight; //both have to be out of range because k_1orKmk_1 is true
-    return k[1]>ir.k_1NormRight || (ir.k[1]-k[1])<-ir.kmk_1NormRight;
+      return k[1] > ir.k_1NormRight && (ir.k[1] - k[1]) < -ir.kmk_1NormRight; //both have to be out of range because k_1orKmk_1 is true
+    return k[1] > ir.k_1NormRight || (ir.k[1] - k[1]) < -ir.kmk_1NormRight;
   }
 
   inline bool operator<=(Index2D& i2) const{
-    if((*this)[1]==i2[1])
-      return (*this)[0]<=i2[0];
-    return (*this)[1]<=i2[1];
+    if((*this)[1] == i2[1])
+      return (*this)[0] <= i2[0];
+    return (*this)[1] <= i2[1];
   }
 
   inline Index2D operator/(double divisor) const{
@@ -520,19 +524,44 @@ public:
   }
 
   inline int mode2array(int m, bool re, int includeZero = withZero) const{
-    if(re)
-      return 2*(k[0]+m+(2*m+1)*k[1]+(2*m*m+3*m+1)*l); //index of the first mode stored is (i_0,i_1)=(-m,0) (upper halfspace is for i_1>=0)
-    return 2*(k[0]+m+(2*m+1)*k[1]+(2*m*m+3*m+1)*l)+1;
+    int t = (includeZero == withoutZero ? -1 : 0);
+    
+    int r;
+    if(k[1] == 0)
+      r = k[0] + t;
+    else
+      r = k[1] * (2 * m + 1) + k[0] + t; //this is mysterious, but works OK
+      
+    r *= 2;
+    
+    if(!re)
+      r++;
+    return r;    
   }
 
+  /**Function reverse to mode2array , i.e. array index i is provided, and Index2D is calculated
+   * 
+   */
   inline static Index2D array2modeIndex(int m, int i, int includeZero = withZero){
+    int t = (includeZero == withoutZero ? -1 : 0);
+        
     Index2D r;
-    i /= 2;
-    r.l = i / (2*m*m+3*m+1);
-    i = i % (2*m*m+3*m+1);
-    r[1] = i / (2*m+1);
-    i = i % (2*m+1);
-    r[0] = i - m;
+    if(i <= 2 * (m + t) + 1){
+      r[1] = 0;
+      r[0] = i / 2 + t;
+    }else{
+      int s = i;
+      s /= 2;
+      s -= t;
+      int u = s / (2 * m + 1);
+      int p =  s - u * (2 * m + 1);
+      if(p <= m)
+        r[0] = p;
+      else
+        r[0] = s - (u + 1) * (2 * m + 1);
+      
+      r[1] = (s - r[0]) / (2 * m + 1); 
+    }
     return r;
   }
 
@@ -541,14 +570,7 @@ public:
       re = true;
     else
       re = false;
-    Index2D r;
-    i /= 2;
-    r.l = i / (2*m*m+3*m+1);
-    i = i % (2*m*m+3*m+1);
-    r[1] = i / (2*m+1);
-    i = i % (2*m+1);
-    r[0] = i - m;
-    return r;
+    return array2modeIndex(m, i, includeZero);
   }
 
   friend std::ostream& operator<<(std::ostream& out, const Index2D& i) // output
@@ -557,11 +579,14 @@ public:
     return out;
   }
 
-  ///That is how we define the upper halfspace, i.e. { (k_1, k_2) | k_2 > 0 or k_2 = 0 and k_1 > 0 }
+  /**That is how we define the upper halfspace, i.e. { (k_1, k_2) | k_2 > 0 or k_2 = 0 and k_1 >= 0 }
+   *
+   * The upper-halfspace has to start at the index (0,0), because this mode has to be stored explicitly
+   */
   inline bool upperHalfspace() const{
-    if(k[1]>0)
+    if(k[1] > 0)
       return true;
-    if(k[1]==0 && k[0]>0)
+    if(k[1] == 0 && k[0] >= 0)
       return true;
     return false;
   }
@@ -572,6 +597,36 @@ public:
     index[0] = -m;
     return index;
   }
+
+  /**returns
+    *\f[
+    *\sum_{k\in{range}}{\frac{1}{|k|^s}}, where k, k_1 are 2D indices
+    *\f]
+    */
+   template <class ScalarType, class IndexRangeT, class NormT>
+   static ScalarType harmonicSumK_1(const IndexRangeT& range, int s){
+     if(!range.k_1UptoInfinity()){
+       std::cerr << "forbidden call of harmonicSumK_1 with range which is not upto infinity.\n";
+       throw std::runtime_error("forbidden call of harmonicSumK_1 with range which is not upto infinity.\n");
+     }
+     ScalarType start = (range.k_1IneqLeft == strong ? range.k_1NormLeft : range.k_1NormLeft + 1);
+     return NormT::harmonic2DBound(start, s);
+   }
+
+   /**returns
+     *\f[
+     *\sum_{k\in{range}}{\frac{1}{|k|^s}}, where k, k_1 are 2D indices
+     *\f]
+     */
+    template <class ScalarType, class IndexRangeT, class NormT>
+    static ScalarType harmonicSumKmk_1(const IndexRangeT& range, int s){
+      if(!range.k_1UptoInfinity()){
+        std::cerr << "forbidden call of harmonicSumK_1 with range which is not upto infinity.\n";
+        throw std::runtime_error("forbidden call of harmonicSumK_1 with range which is not upto infinity.\n");
+      }
+      ScalarType start = (range.kmk_1IneqLeft == strong ? range.kmk_1NormLeft : range.kmk_1NormLeft + 1);
+      return NormT::harmonic2DBound(start, s);
+    }
 
 };
 
@@ -613,6 +668,206 @@ inline bool operator>(const Index2D& i1, const Index2D& i2){
   return i1[1]>i2[1];
 }
 
+
+
+
+
+
+
+
+
+class Index2DTwoComponents : public Index{
+public:
+  Index2DTwoComponents() : Index(){}
+  inline Index2DTwoComponents(const Index2DTwoComponents& i2) : Index(i2){}
+  inline virtual int d() const{return 2;}
+  
+  inline virtual int components() const{ return 2;}
+
+  /**Switches l (component of a mode) during increasing
+   *
+   * @param unconditional if true then the l of the index is not being changed, otherwise it changes cyclically
+   */
+  template<class IndexRangeT>
+  inline bool inc(const IndexRangeT& ir, bool unconditional = false){
+    Index2DTwoComponents t(*this);
+    cast();
+    if(l == 0 && !unconditional)
+      l++;
+    else{
+      if(!unconditional) l=0;
+      do{
+        if(k[0]<ir.moduloM1Index())
+          k[0]++;
+        else{
+          k[1]++;
+          k[0]=ir.returnIndex();
+        }
+        //the last inequality used when noninteger index is increased
+      }while((!ir.withinRange(*this) && (k[1] <= ir.k_1NormRight)) || (*this <= t));
+    }
+    if(ir.withinRange(*this)){
+      return true;
+    }else{
+      return false;
+    }
+  }
+
+  ///TODO: verify this, 31.10.11 probably was error here not (ir.k[1]-k[1])>ir.kmk_1NormRight but (ir.k[1]-k[1])<-ir.kmk_1NormRight
+  template<class IndexRangeT>
+  inline bool limitReached(const IndexRangeT& ir){
+    if(ir.k_1orKmk_1)
+      return k[1]>ir.k_1NormRight && (ir.k[1]-k[1])<-ir.kmk_1NormRight; //both have to be out of range because k_1orKmk_1 is true
+    return k[1]>ir.k_1NormRight || (ir.k[1]-k[1])<-ir.kmk_1NormRight;
+  }
+
+  inline bool operator<=(Index2DTwoComponents& i2) const{
+    if((*this)[1]==i2[1])
+      return (*this)[0]<=i2[0];
+    return (*this)[1]<=i2[1];
+  }
+
+  inline Index2DTwoComponents operator/(double divisor) const{
+    Index2DTwoComponents r(*this);
+    r.k[0]=k[0]/divisor;
+    r.k[1]=k[1]/divisor;
+    return r;
+  }
+
+  inline Index2DTwoComponents operator-() const{
+    Index2DTwoComponents r(*this);
+    r.k[0]=-r.k[0];
+    r.k[1]=-r.k[1];
+    return r;
+  }
+
+  static Index2DTwoComponents zero(){
+    Index2DTwoComponents i2D;
+    i2D[0]=0;
+    i2D[1]=0;
+    return i2D;
+  }
+
+  inline int orderNorm() const{
+    return 0;//k[0]+max+(2*max+1)*k[1];
+  }
+
+  inline int mode2array(int m, bool re, int includeZero = withZero) const{
+    if(re)
+      return 2*(k[0]+m+(2*m+1)*k[1]+(2*m*m+3*m+1)*l); //index of the first mode stored is (i_0,i_1)=(-m,0) (upper halfspace is for i_1>=0)
+    return 2*(k[0]+m+(2*m+1)*k[1]+(2*m*m+3*m+1)*l)+1;
+  }
+
+  inline static Index2DTwoComponents array2modeIndex(int m, int i, int includeZero = withZero){
+    Index2DTwoComponents r;
+    i /= 2;
+    r.l = i / (2*m*m+3*m+1);
+    i = i % (2*m*m+3*m+1);
+    r[1] = i / (2*m+1);
+    i = i % (2*m+1);
+    r[0] = i - m;
+    return r;
+  }
+
+  inline static Index2DTwoComponents array2modeIndex(int m, int i, bool& re, int includeZero = withZero){
+    if(i % 2 == 0)
+      re = true;
+    else
+      re = false;
+    Index2DTwoComponents r;
+    i /= 2;
+    r.l = i / (2*m*m+3*m+1);
+    i = i % (2*m*m+3*m+1);
+    r[1] = i / (2*m+1);
+    i = i % (2*m+1);
+    r[0] = i - m;
+    return r;
+  }
+
+  friend std::ostream& operator<<(std::ostream& out, const Index2DTwoComponents& i) // output
+  {
+    out<<"("<<i.k[0]<<", "<<i.k[1]<<"),"<<i.l;
+    return out;
+  }
+
+  /**That is how we define the upper halfspace, i.e. { (k_1, k_2) | k_2 > 0 or k_2 = 0 and k_1 >= 0 }
+   *
+   * The upper-halfspace has to start at the index (0,0), because this mode has to be stored explicitly
+   */
+  inline bool upperHalfspace() const{
+    if(k[1] > 0)
+      return true;
+    if(k[1] == 0 && k[0] >= 0)
+      return true;
+    return false;
+  }
+
+  inline Index2DTwoComponents firstInUpperHalfspace(int m){
+    Index2DTwoComponents index;
+    index[1] = 0;
+    index[0] = -m;
+    return index;
+  }
+
+};
+
+inline Index2DTwoComponents operator-(const Index2DTwoComponents& i1, const Index2DTwoComponents& i2){
+  Index2DTwoComponents r(i1);
+  r.l = i2.l; //this is important for the fadbad algorithms to work
+  r[0]=i1[0]-i2[0];
+  r[1]=i1[1]-i2[1];
+  return r;
+}
+
+inline bool operator<=(const Index2DTwoComponents& i1, const Index2DTwoComponents& i2){
+  if(i1[1]==i2[1])
+    return i1[0]<=i2[0];
+  return i1[1]<=i2[1];
+}
+
+inline bool operator<(const Index2DTwoComponents& i1, const Index2DTwoComponents& i2){
+  if(i1[1]==i2[1])
+    return i1[0]<i2[0];
+  return i1[1]<i2[1];
+}
+
+inline bool operator>=(const Index2DTwoComponents& i1, const Index2DTwoComponents& i2){
+  if(i1[1]==i2[1])
+    return i1[0]>=i2[0];
+  return i1[1]>=i2[1];
+}
+
+inline bool operator>(const Index2DTwoComponents& i1, const Index2DTwoComponents& i2){
+  if(i1[1]==i2[1])
+    return i1[0]>i2[0];
+  return i1[1]>i2[1];
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//========================================================================================================================
+
+
 ///TODO: in construction
 class Index3D : public Index{
 public:
@@ -620,6 +875,8 @@ public:
   inline Index3D(const Index3D& i2) : Index(i2){}
   inline virtual int d() const{return 3;}
 
+  inline virtual int components() const{ return 3;}
+  
   inline Index3D operator/(double divisor) const{
     Index3D r(*this);
     r.k[0]=k[0]/divisor;

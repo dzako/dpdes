@@ -1,23 +1,3 @@
-/*  dPDEs - this program is an open research software performing rigorous integration in time of partial differential equations
-    Copyright (C) 2010-2013  Jacek Cyranka
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-    
-    Please consult the webpage www.cyranka.net,
-    or contact me on jcyranka@gmail.com for further details.
-*/
-
 #ifndef _CAPD_CONFIG
 #define _CAPD_CONFIG
 
@@ -46,9 +26,6 @@
 
 #define __COUNT_OPERATIONS__ 1 ///if elementary operations should be counted
 
-///GLOBAL VARIABLE IF OPERATIONS SHOULD BE COUNTED
-bool COUNT_OPERATIONS = false;
-
 long long unsigned int RRmultiplicationsSum;
 long long unsigned int RRadditionsSum;
 long long unsigned int CCmultiplicationsSum;
@@ -70,9 +47,10 @@ capd::auxil::OutputStream tailDebug(std::cout, false, true); //OutputStream for 
 capd::auxil::OutputStream NDebug(std::cout, false, true);
 capd::auxil::OutputStream generalDebug2(std::cout, false, true);
 capd::auxil::OutputStream fftDebug(std::cout, false, true);
+
 extern inline void setLoggers(){
   generalDebug.logfile("general.txt", true);
-  generalDebug.log = false;
+  generalDebug.log = true;
   generalDebug2.logfile("general2.txt", true);
   generalDebug2.log = false;
   enclosureDebug.logfile("enclosure.txt", true);

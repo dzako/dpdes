@@ -1,23 +1,3 @@
-/*  dPDEs - this program is an open research software performing rigorous integration in time of partial differential equations
-    Copyright (C) 2010-2013  Jacek Cyranka
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-    
-    Please consult the webpage www.cyranka.net,
-    or contact me on jcyranka@gmail.com for further details.
-*/
-
 /*
  * OperationsCountBurgers.cpp
  *
@@ -50,8 +30,8 @@
 #include "Pair.h"
 
 #include "Odd.h"
-#include "dynset/C0Rect2Set.hpp"
-#include "dynset/C0Rect2RSet.hpp"
+#include "capd/dynset/C0Rect2Set.hpp"
+#include "capd/dynset/C0Rect2RSet.hpp"
 
 #include "FFT.h"
 #include "Equations.h"
@@ -102,46 +82,10 @@ capd::auxil::OutputStream directApproachOperationsCount(std::cout, false, true);
 int ns[100];
 int ms[100];
 int orders[100];
-
-/**HERE YOU SET WHICH VALUES TO USE IN TESTS*/
-const int starti = 3,     
+const int starti = 3, 
           endi = 19,
           startio = 0,
           endio = 7;
-
-///this is to calculate the number of operations for the padding technique
-void initTablesPadding(){
-  ns[2] = 14; ms[2] = 45;  
-  ns[3] = 19; ms[3] = 60;  
-  ns[4] = 24; ms[4] = 75;  
-  ns[5] = 29; ms[5] = 90;  
-  ns[6] = 34; ms[6] = 108;  
-  ns[7] = 39; ms[7] = 120;  
-  ns[8] = 44; ms[8] = 135;  
-  ns[9] = 49; ms[9] = 150;    
-  ns[10] = 54; ms[10] = 180;
-  ns[11] = 59; ms[11] = 180;
-  ns[12] = 64; ms[12] = 200;
-  ns[13] = 69; ms[13] = 216;
-  ns[14] = 74; ms[14] = 225;
-  ns[15] = 79; ms[15] = 240;
-  ns[16] = 84; ms[16] = 256;
-  ns[17] = 89; ms[17] = 270;
-  ns[18] = 94; ms[18] = 288;
-  ns[19] = 99; ms[19] = 300;
-  
-  
-  orders[0] = 3;
-  orders[1] = 4;
-  orders[2] = 5;
-  orders[3] = 6;
-  orders[4] = 7;
-  orders[5] = 8;
-  orders[6] = 9;
-  orders[7] = 10;
-  orders[8] = 15;
-  orders[9] = 12;
-}
 
 void initTables(){
   
@@ -202,7 +146,7 @@ int main(){
   directApproachOperationsCount.logfile("directOpCnt_Burgers.txt", true);
   directApproachOperationsCount.log = true;  
   setLoggers();
-  initTablesPadding();
+  initTables();
   
   int i, j;  
   for(j = startio; j <= endio; ++j){
@@ -218,7 +162,7 @@ int main(){
        capd::jaco::DPDEContainer container;
        ///2.set here the subspace of the initial condition e.g. setToRealValuedOdd means that the initial condition is real valued odd
        container.setToRealValued();
-       FOJ1D::initialize(ModesContainer1D::modes2arraySizeStatic(n), container);
+       FOJ1D::initialize(ModesContainer1D::modes2arraySizeStatic(m), container);
        ///end FOJ initialization   
     
        FFTDynSys dynsys( n, m, step, order, PI, nu);
@@ -248,7 +192,7 @@ int main(){
        for(i=0; i < 1; ++i){    
          set.move(dynsys);
        }    
-       directApproachOperationsCount << order << " " << n << " " << " " << RRmultiplicationsSum / 1e+06 << " " << RRadditionsSum / 1e+06 << "\n";
+       directApproachOperationsCount << order << " " << n << " " << " " << RRmultiplicationsSum / 1e+06 << " " << RRadditionsSum / 1e+06 << "\n";         
     } 
     fftApproachOperationsCount << "\n";
     directApproachOperationsCount << "\n";

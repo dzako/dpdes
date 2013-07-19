@@ -1,4 +1,8 @@
-comparision_of_diameters/*
+.cproject
+.obj/*
+.project
+.settings
+comparison_of_diameters/*
 intervals/*
 with_without_rounding/*
 BurgersFPTest
@@ -9,12 +13,17 @@ OperationsCountKS
 OperationsCountSH
 PolyBdTests
 SHTest
+FFTTests
+ExactFFTTest
+2DIntegratorTest
+IndicesTests
+KSPOTest
+PolyBd2DTests
 enclosure.txt
 fft.txt
 general.txt
 general2.txt
 gnuplot.txt
-gnuplot.txt~
 N.txt
 tail.txt
 test.txt
@@ -22,3 +31,4 @@ test1_2.txt
 test1.txt
 test2_2.txt
 test2.txt
+*~

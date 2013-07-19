@@ -1,24 +1,3 @@
-/*  dPDEs - this program is an open research software performing rigorous integration in time of partial differential equations
-    Copyright (C) 2010-2013  Jacek Cyranka
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-    
-    Please consult the webpage www.cyranka.net,
-    or contact me on jcyranka@gmail.com for further details.
-*/
-
-
 /*
  * SHTest.cpp
  *
@@ -265,11 +244,11 @@ void diffInclTest(int testNumber, int approach){
   }
   if(testNumber == 2){
     ///3.choose the algorithm type, see enum AlgorithmType in FFTDynSys.h file
-    nu = 65;
+    nu = 70;
     STEPS = 6000;
     m = 12; 
     M = 50;
-    dftPts = 32;
+    dftPts = 30;
     dftPts2 = 128; 
     step = 0.0001;  
     ss << "test3_SHincl_";
@@ -301,8 +280,6 @@ void diffInclTest(int testNumber, int approach){
   time_t rawtime;
   time ( &rawtime );
   log << "The current local time is: " << ctime (&rawtime) << "\n";
-  log << "Taylor method order=" << order << ", constant time step=" << step << "\n";
-  log << "Galerkin projection dimension m=" << m << ", M_{FFT}=" << dftPts << "\n"; 
   log << "the whole infinite dimensional system is being integrated (the Lohner algorithm for differential inclusions is used).\n";
   if(approach == 0){
     diffIncl.getDynamicalSystem().setJetDynSysAlgorithmType(capd::jaco::direct);

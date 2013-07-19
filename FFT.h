@@ -1,23 +1,3 @@
-/*  dPDEs - this program is an open research software performing rigorous integration in time of partial differential equations
-    Copyright (C) 2010-2013  Jacek Cyranka
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-    
-    Please consult the webpage www.cyranka.net,
-    or contact me on jcyranka@gmail.com for further details.
-*/
-
 /*
  * FFT.h
  *
@@ -52,6 +32,8 @@ enum SmallTransformsOmegas { sin60, sin90, sin270, sin72, sin36};
 enum FFTVariant{unscrambled, scrambled, selfSorting};
 enum AliasingRemoval{none, phaseShiftOddEven, phaseShiftRegular, padding};
 enum Shift{quarterGridCell, halfGridCell};
+
+enum TransformType{realValuedTransform, complexValuedTransform};//if transform is real-valued, or complex-valued
 /**Real odd boundary conditions*/
 
 /**Calculates one-dimensional FFT.
@@ -175,7 +157,7 @@ public:
 
   FFT1D(){}
 
-  FFT1D(int n_, int m_, IntervalType pi_) : SubspaceType(n, 2*n), n(n_), m(m_), factors(m), factorsInv(m), W2(2, 2), omegas(m),
+  FFT1D(int n_, int m_, IntervalType pi_) : SubspaceType(n_, 2*n_), n(n_), m(m_), factors(m), factorsInv(m), W2(2, 2), omegas(m),
       omegasInv(m), smallTransformsOmegas(10), smallTransformsOmegasInv(10), phaseShiftHalfGridCell(m), phaseShiftQuarterGridCell(m),
       phaseShiftHalfGridCellInv(m), phaseShiftQuarterGridCellInv(m), temp(m), tempR(m), pad(m), s(m),
       auxiliary(15), pi(pi_){
@@ -185,10 +167,10 @@ public:
     }
     //important  warning about the aliasing error possibility
 
-    if(! (2* n + 1 <= m)){
+    if(! (n + 1 <= m/2)){
       std::cerr << "ATTENTION! ALIASING ERROR WILL BE PRESENT! INCREASE m\n n="<<n<<", m="<<m<<"\n";
     }
-    if(2 * n + 1 <= m && 3*n >= m){
+    if(n + 1 <= m/2 && 3*n >= m){
       std::cerr << "Warning! Possible aliasing error, PHASE SHIFT ALIASING REMOVAL TECHNIQUE HAS TO BE USED\n n="<<n<<", m="<<m<<"\n";
     }
 
@@ -422,6 +404,12 @@ public:
 
   /** The transform procedure body, without normalizing.
    *
+   * Note: when withoutUnscrambling variant of FFT is used (the output data are not unscrambled - the order in which modes appear on
+   * the output is not at all relevant) the permutation step (multiplication by permutation matrix - the last 'if') can be skipped.
+   * 
+   * In case the permutation step is skipped, the inverse transform must be executed without performing the permutation step at all,
+   * IMPORTANT: FFTv2 variant has to be used in order for calculations to match.
+   *
    * @param u vector that is being transformed
    * @param omegas vector consisting of values of exp(i * j * k), depends if a transform or inverse transform is being performed
    * @param temp temporary buffer vector, used when permuting elements of the vector u
@@ -429,7 +417,8 @@ public:
    * @return
    */
   inline const void FFT(const VectorType& u, const ComplexVectorType& omegas, const ComplexVectorType& smallTransformsOmegas,
-                        typename capd::vectalg::Vector<int, M>& factors, VectorType& temp, VectorType& r, int unscrambl = withoutUnscrambling){
+                        typename capd::vectalg::Vector<int, M>& factors, VectorType& temp, VectorType& r, int unscrambl = withoutUnscrambling,
+                        int transformType = realValuedTransform){
     int j = 0,
         n_j = 2,
         l_j, m_j, l, k, firstIndex, secondIndex, thirdIndex, fourthIndex, fifthIndex, s, t, x;
@@ -439,7 +428,7 @@ public:
       n_j = factors[j];
       m_j = m / (l_j*n_j);
       for(l=0; l < l_j; ++l){
-        for(k=0; k <= (unscrambl == withoutUnscrambling ? m_j/2 : m_j-1); ++k){ //this is an optimization, but works ONLY for real valued series
+        for(k=0; k <= (unscrambl == withoutUnscrambling && transformType == realValuedTransform ? m_j/2 : m_j-1); ++k){ //this is an optimization, but works ONLY for real valued series
         ///TODO: check why we cannot optimize this way when unscrambling is used (it looks like the theorem is not fulfilled)
 //      for(k=0; k < m_j; ++k){
           firstIndex = k + l*m_j*n_j;
@@ -476,8 +465,8 @@ public:
             r[fifthIndex] = omegas[4 * l_j * k] * r[fifthIndex];
           }
         }
-        if(unscrambl == withoutUnscrambling){
-          //TODO: this works only for real-valued
+        if(unscrambl == withoutUnscrambling && transformType == realValuedTransform){
+          
           for(k = m_j/2 + 1; k < m_j; ++k){
             for(s=0; s < n_j; ++s){
               r[k + s*m_j + l*m_j*n_j] = conjugate(r[m_j - k + s*m_j + l*m_j*n_j]);
@@ -486,8 +475,8 @@ public:
         }
       }
       fftDebug << "j="<<j<<", factors[j]="<<factors[j]<<" l_j+1="<<l_j<<", m_j="<<m_j<<", r:\n";
-      //TODO: this works only for real-valued
-      if(unscrambl == withoutUnscrambling){
+      
+      if(unscrambl == withoutUnscrambling && transformType == realValuedTransform){
         for(l=0; l < m / m_j; ++l){
           r[l * m_j].setImaginaryPartToZero();
           if(m_j % 2 == 0) r[l * m_j + m_j/2].setImaginaryPartToZero();
@@ -531,13 +520,22 @@ public:
 
   /**This is the variant of the FFT algorithm, which first multiplies by permutation matrices and then by the sparse matrices with
    * ''omegas''.
+   * 
+   * Note: when withoutUnscrambling variant of FFT is used (the output data are not unscrambled - the order in which modes appear on
+   * the output is not at all relevant) the permutation step (multiplication by permutation matrix - the first 'if') can be skipped. 
    */
   inline const void FFTv2(const VectorType& u, const ComplexVectorType& omegas, const ComplexVectorType& smallTransformsOmegas,
-                          typename capd::vectalg::Vector<int, M>& factors, VectorType& temp, VectorType& r, int unscrambl = withoutUnscrambling){
+                          typename capd::vectalg::Vector<int, M>& factors, VectorType& temp, VectorType& r, int unscrambl = withoutUnscrambling,
+                          int transformType = realValuedTransform){
     int j = 0,
         n_j = 2,
         l_j, m_j, l, k, firstIndex, secondIndex, thirdIndex, fourthIndex, fifthIndex, s, t, x;
     r = u;
+    
+    //it seems that this function is implemented only for realValued transform
+    if(transformType != realValuedTransform)
+      throw std::runtime_error("The function FFTv2 is not implemented for complex input (this function is optimized for real-valued transform)");
+    
     if(unscrambl == withUnscrambling){
       if(p > 1){
         for(j=p, l_j = m; j > 1; --j){ //this is different than in v1, because in this case P_1=Id
@@ -611,6 +609,7 @@ public:
                             (fifthIndex <= n_j*l_j / 2 + k*n_j*l_j));
           }
         }
+        //here the rest of values are calculated by conjugating the already calcualated values (works only for real-valued transform)
         for(l = 1; l < (n_j*l_j + 1)/ 2; l++){
           r[l + n_j*l_j / 2 + k*n_j*l_j] = conjugate(r[(n_j*l_j + 1)/ 2 + k*n_j*l_j - l]);
         }
@@ -633,10 +632,10 @@ public:
    *   W_M(k,l)=e^{ikl2\pi/M}
    * /f]
    */
-  inline void transform(const VectorType& u, VectorType& r, int variant){
+  inline void transform(const VectorType& u, VectorType& r, int variant, int transformType = realValuedTransform){
     switch(variant){
-      case unscrambled : FFT(u, omegas, smallTransformsOmegas, factors, temp, r, withUnscrambling); break;
-      case scrambled : FFT(u, omegas, smallTransformsOmegas, factors, temp, r, withoutUnscrambling); break;
+      case unscrambled : FFT(u, omegas, smallTransformsOmegas, factors, temp, r, withUnscrambling, transformType); break;
+      case scrambled : FFT(u, omegas, smallTransformsOmegas, factors, temp, r, withoutUnscrambling, transformType); break;
       case selfSorting : FFTSS(u, omegas, smallTransformsOmegas, factors, temp, r); break;
       default: FFTSS(u, omegas, smallTransformsOmegas, factors, temp, r);
     }
@@ -650,10 +649,10 @@ public:
    *   \hat{W}_M(k,l)=e^{ikl2\pi/M}
    * /f]
    */
-  inline void inverseTransform(const VectorType& u, VectorType& r, int variant){
+  inline void inverseTransform(const VectorType& u, VectorType& r, int variant, int transformType = realValuedTransform){
     switch(variant){
-      case unscrambled : FFT(u, omegasInv, smallTransformsOmegasInv, factorsInv, temp, r, withUnscrambling); break;
-      case scrambled : FFTv2(u, omegasInv, smallTransformsOmegasInv, factorsInv, temp, r, withoutUnscrambling); break;
+      case unscrambled : FFT(u, omegasInv, smallTransformsOmegasInv, factorsInv, temp, r, withUnscrambling, transformType); break;
+      case scrambled : FFTv2(u, omegasInv, smallTransformsOmegasInv, factorsInv, temp, r, withoutUnscrambling, transformType); break;
       case selfSorting : FFTSS(u, omegasInv, smallTransformsOmegasInv, factorsInv, temp, r); break;
       default: FFTSS(u, omegasInv, smallTransformsOmegasInv, factorsInv, temp, r);
     }
@@ -707,35 +706,39 @@ public:
     }
   }
 
-  /**TODO: THIS FUNCTION IS A COMPLEX VERSION OF FFT, THIS WAS IMPLEMENTED FOR 2D TRANSFORM PURPOSE AND SHOULD BE CHANGED.
+  
+  
+  /**THIS FUNCTION IS A COMPLEX VERSION OF FFT, THIS IS IMPLEMENTED FOR 2D TRANSFORM.
+   * 
+   * default variant here is the self-sorting (because this transform is called for complex data and optimizations cannot be performed)
    */
-  inline void extendedTransform(const ModesContainerType& modes, DFTGridType& r, int aliasingRemoval = phaseShiftOddEven, int variant = unscrambled){
+  inline void extendedTransform(const ModesContainerType& modes, DFTGridType& r, int aliasingRemoval = padding, int variant = selfSorting){
+    
     padVector(modes, pad, 1, 1);
-    //transform(pad, tempR);
-    r  = tempR;
-    padVector(modes, pad, 0, 0);
-    //inverseTransform(pad, tempR, true);
-    r += tempR;
+     if(aliasingRemoval == padding){
+       if(m <= 3 * n){
+         std::cerr << "Relation m <= 3 * n is not satisfied, m=" << m << ", 3*n=" << 3*n << "\n";
+         throw std::runtime_error("Relation m <= 3 * n is not satisfied\n");
+       }
+     }else{
+       if(aliasingRemoval == phaseShiftOddEven)
+         phaseShiftVector(pad, phaseShiftOddEven, 1);
+       if(aliasingRemoval == phaseShiftRegular)
+         phaseShiftVector(pad, phaseShiftRegular, 1);
+     }
+     fftDebug << "input:\n";
+     int x;
+     for(x=0; x < pad.size(); ++x)
+       fftDebug<<pad[x]<<", diam="<<diam(pad[x].value().re)<<", "<<diam(pad[x].value().im)<<"\n";
+     transform(pad, r, variant, complexValuedTransform);
+     r.setSubspaceType(modes);
+     r.projectOntoSubspace();
+    
   }
 
-  /**TODO: how thithis probably doesn't make sense.
+  /**assumes that the input modes 'modes' represents a real-valued function
+   * 
    */
-  inline void inverseExtendedTransform(const DFTGridType& s, ModesContainerType& r, int aliasingRemoval = phaseShiftOddEven, int variant = unscrambled){
-    if(!ModesContainerType::storesLowerHalfspaceIndependently){
-      std::cerr << " Error in FFT1D inverseExtendedTransform function. It is allowed only for containers that are storing the lower " <<
-          "halfspace of modes independently (they are not dependent by the conjugating relation a_k=\\overline{a_{-k}}\n";
-      throw std::runtime_error(" Error in FFT1D inverseExtendedTransform function. It is allowed only for containers that are storing the lower halfspace of modes independently (they are not dependent by the conjugating relation a_k=\\overline{a_{-k}}\n");
-    }
-    //inverseTransform((const VectorType&)s, tempR);
-    int i;
-    for(i=0; i <= n; ++i)
-      r[IndexType(i)] = tempR[i];
-    //transform((const VectorType&)s, tempR, true);
-    for(i=1; i <= n; ++i)
-      r[IndexType(-i)] = tempR[i];
-  }
-
-  ///TODO: write description
   inline void fastTransform(const ModesContainerType& modes, DFTGridType& r, int aliasingRemoval = phaseShiftOddEven, int variant = scrambled){
 //    padVector(modes, pad, 1, 0);
 //    transform(pad, tempR);
@@ -765,6 +768,44 @@ public:
     r.projectOntoSubspace();
   }
 
+  /**used in 2D FFT transform. 'extended' means that the optimizations which can be performed in real-valued case are not performed here
+   */
+  inline void inverseExtendedTransform(const DFTGridType& s, ModesContainerType& r, int aliasingRemoval = padding, int variant = selfSorting){
+    if(!ModesContainerType::storesLowerHalfspaceIndependently){
+      std::cerr << " Error in FFT1D inverseExtendedTransform function. It is allowed only for containers that are storing the lower " <<
+          "halfspace of modes independently (they are not dependent by the conjugating relation a_k=\\overline{a_{-k}}\n";
+      throw std::runtime_error(" Error in FFT1D inverseExtendedTransform function. It is allowed only for containers that are storing the lower halfspace of modes independently (they are not dependent by the conjugating relation a_k=\\overline{a_{-k}}\n");
+    }
+    fftDebug << "input:\n";
+    int x;
+    for(x=0; x < s.size(); ++x)
+      fftDebug<<s[x]<<", diam="<<diam(s[x].value().re)<<", "<<diam(s[x].value().im)<<"\n";
+    
+    inverseTransform(s, tempR, variant, complexValuedTransform);
+    if(aliasingRemoval == padding){
+      if(m <= 3 * n){
+        std::cerr << "Relation m <= 3 * n is not satisfied, m=" << m << ", 3*n=" << 3*n << "\n";
+        throw std::runtime_error("Relation m <= 3 * n is not satisfied\n");
+      }
+    }else{
+      if(aliasingRemoval == phaseShiftOddEven)
+        phaseShiftVector(tempR, phaseShiftOddEven, -1);
+      if(aliasingRemoval == phaseShiftRegular)
+        phaseShiftVector(tempR, phaseShiftRegular, -1);
+    }
+    int i;
+    for(i = 0; i <= n; ++i){
+      r[Index1D(i)] = tempR[i];
+    }
+    if(ModesContainerType::storesLowerHalfspaceIndependently){
+      for(i = -n; i < 0; ++i){
+        r[Index1D(i)] = tempR[m + i];
+      }
+    }
+    r.setSubspaceType(s);
+    r.projectOntoSubspace();    
+  }
+  
   inline void fastInverseTransform(const DFTGridType& s, ModesContainerType& r, int aliasingRemoval = phaseShiftOddEven, int variant = scrambled){
 //    inverseTransform((const VectorType&)s, tempR);
 //    int i;
@@ -775,6 +816,11 @@ public:
 //      }
 //    }
 //    VectorType& v = (VectorType&)s;
+    fftDebug << "input:\n";
+    int x;
+    for(x=0; x < s.size(); ++x)
+      fftDebug<<s[x]<<", diam="<<diam(s[x].value().re)<<", "<<diam(s[x].value().im)<<"\n";
+    
     inverseTransform(s, tempR, variant);
     if(aliasingRemoval == padding){
       if(m <= 3 * n){
@@ -837,6 +883,201 @@ public:
 };
 
 
+/*
+ * 17.04.2013 tested to work good
+ */
+template< class ScalarT, class ComplexScalarT, class NormT, int N, int M,
+  class ModesContainerT = capd::jaco::ComplexPolyBdJetOptimized<typename ComplexScalarT::ScalarType, ScalarT, capd::jaco::Index2D, 2*2*2*N*N> >
+class FFT2DOneComponent : public ModesContainerT::SubspaceType{
+public:
+  typedef ScalarT ScalarType;
+  typedef ComplexScalarT ComplexScalarType;
+  typedef typename ComplexScalarType::ScalarType IntervalType;
+  typedef FFT1D<ScalarType, ComplexScalarType, N, M> FFT1DType;
+  typedef typename FFT1DType::VectorType Vector1DType;
+  typedef ModesContainerT ModesContainer2DType;
+  typedef typename FFT1DType::ModesContainerType ModesContainer1DType;
+  typedef ModesContainer2DType ModesContainerType;
+  typedef capd::jaco::DFT2DGrid<IntervalType, ScalarType, M> DFT2DGridType;
+  typedef DFT2DGridType DFTGridType;
+  typedef typename DFT2DGridType::DFT1DGridType DFT1DGridType;
+  typedef capd::jaco::Index2D Index2DType;
+  typedef Index2DType IndexType;
+  typedef typename FFT1DType::IndexType Index1DType;
+
+  typedef capd::jaco::DFT1DGrid<IntervalType, ModesContainer1DType, M> Grid1DOfModesContainer1DType; ///<is that not too complicated?
+  typedef capd::jaco::ComplexPolyBdJetOptimized<IntervalType, DFT1DGridType, Index1DType, 2*N > ModesContainer1DOfGrid1DType;
+  typedef typename ModesContainerType::SubspaceType SubspaceType;
+  typedef typename SubspaceType::IndexRangeType IndexRangeType;
+
+
+  int n;
+  int m;
+  FFT1DType fft1d;
+  DFT1DGridType rProjection;
+  ModesContainer1DType mc1d;
+  Grid1DOfModesContainer1DType gridOfModes;
+  ModesContainer1DOfGrid1DType modesContainerOfGrid;
+  DFT2DGridType s; ///< for temporary results
+  ModesContainer2DType t; ///< for temporary results
+
+  FFT2DOneComponent(){}
+  
+  FFT2DOneComponent(int n_, int m_, IntervalType pi_) : SubspaceType(n_, 2*n_), n(n_), m(m_), fft1d(n_, m_, pi_), rProjection(m_), mc1d(n_),
+      gridOfModes(m_, false), modesContainerOfGrid(n_), s(m_), t(n_){
+    int i;
+    for(i=0; i < m; ++i)
+      gridOfModes[i] = ModesContainer1DType(n);    
+    for(i=-n; i <= n; ++i){     
+      modesContainerOfGrid[Index1DType(i)] = DFT1DGridType(m);      
+    }
+    
+  }
+
+  /**Returns dimension of a two dimensional modes container.
+   */
+  static int modesContainerDim(int n){
+    return 2*2*n*n;
+  }
+
+  /**Takes 1D projection of 2D discrete set of modes, and returns 1D ModesContainer.
+   *
+   * @param component this is the component of modes for which the transform is being calculated (either 0 or 1)
+   */
+  inline void takeProjection(const ModesContainer2DType& mc2d, ModesContainer1DType& mc1d, int fixedSecondComponent, int component) const{
+    int k_1;
+    Index2DType index;
+    index.l = component;
+    index[1] = fixedSecondComponent;
+    
+    for(k_1 = -n; k_1 <= n; ++k_1){
+      index[0] = k_1;
+      mc1d[Index1D(k_1)] = mc2d[index];
+    }
+    
+  }
+
+  /**Sets a fixed 1D projection of 2D discrete set of modes with provided array of values.
+   * @param direction this is the component of modes for which the transform is being calculated (either 0 or 1)
+   */
+  inline void setProjection(const ModesContainer1DType& mc1d, ModesContainer2DType& mc2d, int fixedSecondComponent) const{
+    int k_1;
+    Index2DType index;
+    index[1] = fixedSecondComponent;
+    for(k_1 = -n; k_1 <= n; ++k_1){
+      index[0] = k_1;
+      index.l = 0;
+      mc2d.set(index, mc1d[Index1D(k_1)]);
+      index.l = 1;
+      mc2d.set(index, mc1d[Index1D(k_1)]);
+    }
+  }
+
+
+  /**calculates the scalar product
+   * /f[
+   *  \sum_{k_1\in\text{a Projection}}{a_{k_1}\cdot b_{k-k_1}}
+   * /f]
+   */
+  inline void scalarProduct(const DFT2DGridType& a, const DFT2DGridType& b, ModesContainer2DType& r){
+    s.multiply(a, b);
+
+    IndexType index;
+    IndexRangeType ir;
+    ir.setRange(0, capd::jaco::strong, n, capd::jaco::weak);
+    
+    inverseExtendedTransform(s, r);
+
+  }
+
+  /**Write what are differences with extendedTransform. (it calculates only one coordinate)
+   *
+   */
+  inline void transform(const ModesContainer2DType& modes, DFT2DGridType& r, int aliasingRemoval = padding){
+    int k_2, j_1;
+
+    ///first, calculate N independent FFTs, one for each fixed second index component
+    for(k_2 = 0; k_2 <= n; ++k_2){
+      takeProjection(modes, mc1d, k_2, 0);           
+      
+      //IMPORTANT: here we have to use extended version, because a 1D projection of modes {a_k} (obtained by fixing the second component)
+      //from a 2D set of modes may not satisfy the condition a_{-k}=\overline{a_k}.
+      fft1d.extendedTransform(mc1d, rProjection, aliasingRemoval, selfSorting);
+      
+      //We want the result to be saved in Grid1D, representing a DFT values calculated for all of the discrete points, and for all
+      //possible values of the modes index second component (which was fixed).
+
+      for(j_1=0; j_1 < m; ++j_1){
+        gridOfModes[j_1].set(Index1D(k_2), rProjection[j_1]);
+      }
+      
+    }         
+
+    ///second, calculate M independent FFTs, one for each j_1 discrete point index that were calculated in the previous step
+    for(j_1=0; j_1 < m; ++j_1){
+      //IMPORTANT: we know that result is going to be real, therefore we use ''fast version'' which avoids some calculations.
+      fft1d.fastTransform(gridOfModes[j_1], rProjection, aliasingRemoval);
+
+      r[j_1]=rProjection; ///r doesn't have more components therefore r[j_1] not r[0][j_1] or r[1][j_1]
+    }
+
+    r.setSubspaceType(modes);
+    r.projectOntoSubspace();
+
+  }
+
+  inline void fastTransform(const ModesContainer2DType& modes, DFT2DGridType& r, int aliasingRemoval = padding){
+    transform(modes, r, aliasingRemoval);
+  }
+  
+  /**
+   *
+   * @param s two dimensional DFT grid
+   * @param r values of modes after inverse transform (direction parameter determines which direction [in 2D case either 0 or 1])
+   *          is being calculated)
+   */
+  inline void inverseTransform(const DFT2DGridType& s, ModesContainer2DType& r, int aliasingRemoval = padding){
+    int j_1, k_2;
+
+    for(j_1=0; j_1 < m; ++j_1){
+      //IMPORTANT: we know that data is real, therefore we use ''fast version'' which avoids some calculations.
+      fft1d.fastInverseTransform(s[j_1], mc1d, aliasingRemoval);
+//      fft1d.inverseExtendedTransform(s[j_1], mc1d);
+      for(k_2 = -n; k_2 <= n; ++k_2){
+        modesContainerOfGrid[Index1D(k_2)][j_1] = mc1d[Index1D(k_2)];
+      }
+    }
+    for(k_2 = 0; k_2 <= n; ++k_2){
+      //IMPORTANT: here we cannot use ''fast version'', because we are calculating a 1D modes projection {a_k} (obtained by
+      //fixing the second component) from a 2D set of modes may not satisfy the condition a_{-k}=\overline{a_k}.
+      fft1d.inverseExtendedTransform(modesContainerOfGrid[Index1D(k_2)], mc1d, aliasingRemoval, selfSorting);
+      setProjection(mc1d, r, k_2);
+    }
+  }
+
+  ///TODO: temporary functions, for debugging
+  void printModes(const ModesContainerType& mc) const{
+    IndexType index;
+    IndexRangeType ir;
+    int j;
+    ir.setRange(0, capd::jaco::strong, n, capd::jaco::weak);
+//    for(j=0; j < index.d(); ++j){
+      for(index = firstModeIndex(ir); !index.limitReached(ir); index.inc(ir)) {
+        generalDebug << index << " " << mc[index] << "\n";
+      }
+ //   }
+  }
+
+  inline void fastInverseTransform(const DFT2DGridType& s, ModesContainer2DType& r, int aliasingRemoval = padding){
+    inverseTransform(s, r, aliasingRemoval);
+    r.setSubspaceType(s);
+    r.projectOntoSubspace();
+  }
+
+
+};
+
+
 /**Calculates 2D FFT for M which is a power of two. This is a variant dedicated for use in the Taylor integrators, it
  * uses specific data representation. First template parameter (ScalarT) is a type that is transformed (complex number,
  * Taylor coefficients), second template parameter (ComplexScalarT) is a class representing a complex number (needed in
@@ -883,11 +1124,13 @@ public:
   capd::vectalg::Matrix<DFT2DGridType, 0, 0> s; ///< for temporary results
   capd::vectalg::Matrix<ModesContainer2DType, 0, 0> t; ///< for temporary results
 
-  FFT2D(int n_, int m_, IntervalType pi_) : SubspaceType(n, 2*n), n(n_), m(m_), fft1d(n, m, pi_), rProjection(m), mc1d(n, n),
-      gridOfModes(m, false), modesContainerOfGrid(n, n), s(2, 2, false), t(2, 2, false){
+  FFT2D(){}
+  
+  FFT2D(int n_, int m_, IntervalType pi_) : SubspaceType(n, 2*n), n(n_), m(m_), fft1d(n, m, pi_), rProjection(m), mc1d(n),
+      gridOfModes(m, false), modesContainerOfGrid(n), s(2, 2, false), t(2, 2, false){
     int i, j;
     for(i=0; i < m; ++i)
-      gridOfModes[i] = ModesContainer1DType(n, n);
+      gridOfModes[i] = ModesContainer1DType(n);
     for(i=-n; i <= n; ++i)
       modesContainerOfGrid[Index1D(i)] = DFT1DGridType(m);
     for(i=0; i < 2; i++)
@@ -970,6 +1213,9 @@ public:
    * /f[
    *  \sum_{k_1\in\text{a Projection}}{(k, a_{k_1})\cdot a_{k-k_1}}
    * /f]
+   * 
+   * This version somehow detects symmetries , i.e. j == imj , in this case there is no need of calculating s[0][1] 
+   * 
    */
   inline void scalarProduct(int j, int imj, const DFTGridType& gridJ, const DFTGridType& gridImJ, ModesContainer2DType& r){
     s[0][0].multiply(gridJ[0], gridImJ[0]);
@@ -1142,6 +1388,7 @@ public:
 
 
 };
+
 
 }
 }

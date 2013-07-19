@@ -55,37 +55,37 @@ typedef capd::vectalg::EuclNorm<IntervalVector, IntervalMatrix> EuclNorm;
 typedef capd::jaco::ComplexScalar<Interval> ComplexScalar;
 typedef capd::jaco::ComplexDerivativePair<ComplexScalar> ComplexDerivativePair;
 
-//Integrators 1D
-//Basic Fad Taylor 1D
-typedef capd::jaco::Index1D Index1D;
-typedef capd::jaco::MaximumNorm<Index1D> MaximumNorm;
-//typedef capd::jaco::Odd<Interval, Index1D, MaximumNorm> OddSubspace;
-typedef capd::jaco::RealPolynomialBound<ComplexScalar, Index1D, 0> RealPolynomialBound;
-//typedef capd::jaco::RealPolynomialBound<ComplexScalar, Index1D, 0> RealPolynomialBound;
+//Integrators 2D
+//Basic Fad Taylor2D
+typedef capd::jaco::Index2D Index2D;
+typedef capd::jaco::MaximumNorm<Index2D> MaximumNorm;
+//typedef capd::jaco::Odd<Interval, Index2D, MaximumNorm> OddSubspace;
+typedef capd::jaco::RealPolynomialBound<ComplexScalar, Index2D, 0> RealPolynomialBound;
+//typedef capd::jaco::RealPolynomialBound<ComplexScalar, Index2D, 0> RealPolynomialBound;
 typedef capd::jaco::Burgers<RealPolynomialBound> Burgers;
 typedef capd::jaco::KS<RealPolynomialBound> KS;
 
-typedef capd::jaco::MaximumNorm<Index1D> Norm1D;
-//typedef capd::jaco::Real<Interval, Index1D, Norm1D> Real1D;
-typedef capd::jaco::Odd<Interval, Index1D, Norm1D> Real1D;
+typedef capd::jaco::MaximumNorm<Index2D> Norm2D;
+//typedef capd::jaco::Real<Interval, Index2D, Norm1D> Real2D;
+typedef capd::jaco::Odd<Interval, Index2D, Norm2D> Real2D;
 typedef capd::dynset::C0Rect2RSet<IntervalMatrix> C0Set;
-//FFT1D
+//FFT2D
 
-typedef capd::jaco::FFT1D<ComplexScalar, ComplexScalar, 0, 0, RealPolynomialBound> FFT1D;
+typedef capd::jaco::FFT2DOneComponent<ComplexScalar, ComplexScalar, capd::jaco::MaximumNorm<Index2D>, 0, 0, RealPolynomialBound> FFT2D;
 
-typedef capd::jaco::DPDE2<Burgers, FFT1D, 0> BurgersDPDE; ///set equation here
+typedef capd::jaco::DPDE2<Burgers, FFT2D, 0> BurgersDPDE; ///set equation here
 
-typedef capd::jaco::FirstOrderJet<ComplexDerivativePair, 0> FOJ1D;
+typedef capd::jaco::FirstOrderJet<ComplexDerivativePair, 0> FOJ2D;
 
-typedef capd::jaco::ComplexPolyBdJetOptimized<Interval, FOJ1D, Index1D, 0> ModesContainer;
+typedef capd::jaco::ComplexPolyBdJetOptimized<Interval, FOJ2D, Index2D, 0> ModesContainer;
 
-typedef capd::jaco::FFT1D<FOJ1D, ComplexScalar, 0, 0, ModesContainer> JetFFT1D;
+typedef capd::jaco::FFT2DOneComponent<FOJ2D, ComplexScalar, capd::jaco::MaximumNorm<Index2D>, 0, 0, ModesContainer> JetFFT2D;
 
-typedef capd::jaco::DPDE2<Burgers, JetFFT1D, 0> JetBurgersDPDE; ///set equation here
+typedef capd::jaco::DPDE2<Burgers, JetFFT2D, 0> JetBurgersDPDE; ///set equation here
 
 typedef capd::jaco::FFTTaylorDynSys<BurgersDPDE, JetBurgersDPDE, 0> FFTDynSys;
 
-typedef FFTDynSys::ModesContainerType ModesContainer1D;
+typedef FFTDynSys::ModesContainerType ModesContainer2D;
 
 void calculateDiams(const IntervalVector& v, Interval& maxD){
   int i;
@@ -101,27 +101,29 @@ void calculateDiams(const IntervalVector& v, Interval& maxD){
 }
 
 void basicFPtest(int testNumber, int approach){
-  int n = 19, //change FOJ1D stack dimension
-      m = 40,
-      order = 6;
-  Interval nu(0.1), //this was chosen empirically such that set will decrease by 10% at the time 1
-           step(0.0001);
+  int n = 3, //change FOJ1D stack dimension
+      m = 10,
+      order = 4;
+  Interval nu(10), //this was chosen empirically such that set will decrease by 10% at the time 1
+           step(0.001);
 
   ///begin FOJ initialization for FFT integrator
   capd::jaco::DPDEContainer container;
   ///2.set here the subspace of the initial condition e.g. setToRealValuedOdd means that the initial condition is real valued odd
   container.setToRealValued();
-  FOJ1D::initialize(ModesContainer1D::modes2arraySizeStatic(m), container);
+  FOJ2D::initialize(ModesContainer2D::modes2arraySizeStatic(m), container);
   ///end FOJ initialization
 
   clock_t start, end;
 
   FFTDynSys dynsys( n, m, step, order, PI, nu);
-
-  Index1D idx;
+  
+  
+  Index2D idx;
   RealPolynomialBound u_0(n), enclosure(n);
+
   double diam;  
-  capd::auxil::OutputStream log(std::cout, false, true);
+  capd::auxil::OutputStream log(std::cout, true, true);
   std::stringstream ss;
   if(testNumber == 0){
     ///3.choose the algorithm type, see enum AlgorithmType in FFTDynSys.h file
@@ -173,7 +175,9 @@ void basicFPtest(int testNumber, int approach){
     log << "Using the direct approach\n";
   }else{
     if(approach == 1){
+      //for 2D test purposes FFT is used in jetDynSys and basicDynSys
       dynsys.setJetDynSysAlgorithmType(capd::jaco::FFT);
+      dynsys.setBasicDynSysAlgorithmType(capd::jaco::FFT);
       log << "Using the FFT approach\n";
     }else{
       dynsys.setJetDynSysAlgorithmType(capd::jaco::FFTButFirstOrderDirect);
@@ -181,21 +185,27 @@ void basicFPtest(int testNumber, int approach){
     }
   }
   
-  int i;
+  int i, j;
+  Index2D index;
   for(i=1; i <= n; ++i){
-    u_0.set(Index1D(i), ComplexScalar(r, r));
+    for(j=1; j <= n; ++j){
+      index[0] = i; index[1] = j;      
+      u_0.set(index, ComplexScalar(1, 1) + ComplexScalar(r, r));
+    }
   } 
   
   //  //end init mo
   C0Set set(u_0, 1);
+  
   IntervalMatrix mx(m, m);
   Interval max;
-  set = C0Set(u_0, 1);
+  set = C0Set(u_0, 1);  
   start = clock();
   log << "initial condition (finite dimensional):\n" << u_0 << "\nitegration started, the output below is the Galerkin projection of the set at each timestep\n";
   for(i=0; i < 10000; ++i){    
+    log << "step #" << i << "\n";
     set.move(dynsys);
-    log << (IntervalVector)set << "\n";
+    dynsys.printGridGnuplotFormat(log);
   }
   log << "\nset at the end: " << (IntervalVector)set << "\n";  
   calculateDiams((IntervalVector)set, max);  
@@ -227,6 +237,5 @@ int main(int argc, char * argv[]){
       }
     }    
   }
-  FOJ1D::destroy();
+  FOJ2D::destroy();
 }
-
