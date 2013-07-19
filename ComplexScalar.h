@@ -69,6 +69,25 @@ public:
     return r;
   }
   
+  inline void split(ComplexScalar& c, ComplexScalar& r) const{
+    (*this).re.split(c.re, r.re);
+    (*this).im.split(c.im, r.im);
+  }
+
+  inline ComplexScalar abs() const{
+    ComplexScalar r;
+    r.re = capd::abs(re);
+    r.im = capd::abs(im);
+    return r;
+  }
+
+  inline ComplexScalar supremum() const{
+    ComplexScalar r;
+    r.re = rightBound(re);
+    r.im = rightBound(im);
+    return r;
+  }
+
   inline ComplexScalar abs_supremum() const{
     ComplexScalar r;
     r.re = rightBound(capd::abs(re));
@@ -204,7 +223,6 @@ public:
 //  }
 
   friend std::ostream& operator<<(std::ostream& out, const ComplexScalar& c){
-
     //out << "(" << fadbad::val(c.re.val()) << "," << fadbad::val(c.im.val()) << ")"; //TODO: for debug purpose
     out << "(" << c.re << "," << c.im << ") diam (" << diam(c.re) << ", " << diam(c.im) << ")";
     return out;

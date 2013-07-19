@@ -924,7 +924,7 @@ public:
   FFT2DOneComponent(){}
   
   FFT2DOneComponent(int n_, int m_, IntervalType pi_) : SubspaceType(n_, 2*n_), n(n_), m(m_), fft1d(n_, m_, pi_), rProjection(m_), mc1d(n_),
-      gridOfModes(m_, false), modesContainerOfGrid(n_), s(m_), t(n_, modesContainerDim(n_)){    
+      gridOfModes(m_, false), modesContainerOfGrid(n_), s(m_), t(n_){
     int i;
     for(i=0; i < m; ++i)
       gridOfModes[i] = ModesContainer1DType(n);    
@@ -1016,11 +1016,13 @@ public:
     ///second, calculate M independent FFTs, one for each j_1 discrete point index that were calculated in the previous step
     for(j_1=0; j_1 < m; ++j_1){
       //IMPORTANT: we know that result is going to be real, therefore we use ''fast version'' which avoids some calculations.
-      
       fft1d.fastTransform(gridOfModes[j_1], rProjection, aliasingRemoval);
 
       r[j_1]=rProjection; ///r doesn't have more components therefore r[j_1] not r[0][j_1] or r[1][j_1]
     }
+
+    r.setSubspaceType(modes);
+    r.projectOntoSubspace();
 
   }
 
@@ -1068,7 +1070,10 @@ public:
 
   inline void fastInverseTransform(const DFT2DGridType& s, ModesContainer2DType& r, int aliasingRemoval = padding){
     inverseTransform(s, r, aliasingRemoval);
+    r.setSubspaceType(s);
+    r.projectOntoSubspace();
   }
+
 
 };
 

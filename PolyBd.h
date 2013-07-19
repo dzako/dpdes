@@ -58,6 +58,7 @@ public:
     int d; ///<this is dimension - number of places needed to store all modes with indexed by set of indices having maximum norm bounded by n
     int N;
     int D;
+    int w; ///<this container is capable of storing G(wM) modes
     FarTailType farTail;
     IndexRangeType irProjection; ///< range of indices from the projection
     IndexRangeType irFiniteTail; ///< range of indices from the finite tail
@@ -69,12 +70,15 @@ public:
 
     bool infiniteDimensional; ///< if container is infinite dimensional
 
+    bool useAbsValues; ///<tells if the absolute values should be returned by this container, !used only by FFT!
+
     RealPolynomialBound(){}
 
 
     RealPolynomialBound(int n_) : ContainerType(modes2arraySizeStatic(n_)), SubspaceType(n_,
-                                  n_), n(n_), d(modes2arraySizeStatic(n_)), farTail(n, n),
-                                  realContainer(modes2realArraySizeStatic(n_)){
+                                  n_), n(n_), d(modes2arraySizeStatic(n_)), N(n_), D(modes2arraySizeStatic(n_)), w(1),
+                                  farTail(n, n), realContainer(modes2realArraySizeStatic(n_)),
+                                  useAbsValues(false){
       infiniteDimensional = false;
       irProjection.setRange(0, capd::jaco::weak, n, capd::jaco::weak);
       irFiniteTail.setRange(n, capd::jaco::strong, n, capd::jaco::weak);
@@ -82,33 +86,35 @@ public:
       irFull.setRange(0, capd::jaco::weak, n, capd::jaco::weak);
     }
 
-    RealPolynomialBound(int n_, int N_) : ContainerType(modes2arraySizeStatic(2 * N_)),
+    RealPolynomialBound(int n_, int N_, int w_ = 2) : ContainerType(modes2arraySizeStatic((w_+1) * N_)),
                                           SubspaceType(n_, N_), n(n_),
-                                          d(modes2arraySizeStatic(n_)), N(N_), D(modes2arraySizeStatic(N_)),
-                                          farTail(n_, N_), realContainer(modes2realArraySizeStatic(n_)){
+                                          d(modes2arraySizeStatic(n_)), N(N_), D(modes2arraySizeStatic(N_)), w(w_),
+                                          farTail(n_, N_), realContainer(modes2realArraySizeStatic(n_)),
+                                          useAbsValues(false){
       infiniteDimensional = true;
       irProjection.setRange(0, capd::jaco::weak, n, capd::jaco::weak);
       irFiniteTail.setRange(n, capd::jaco::strong, N, capd::jaco::weak);
       irProjectionPlusFiniteTail.setRange(0, capd::jaco::weak, N, capd::jaco::weak);
-      irRedundantRange.setRange(N, capd::jaco::strong, 2 * N, capd::jaco::weak);
-      irFull.setRange(0, capd::jaco::weak, 2 * N, capd::jaco::weak);
+      irRedundantRange.setRange(N, capd::jaco::strong, (w+1) * N, capd::jaco::weak);
+      irFull.setRange(0, capd::jaco::weak, (w+1) * N, capd::jaco::weak);
     }
     
     /**
      * @param container this DPDEContainer defines the type of function that is stored in the bound (odd, even or none) 
      * @return
      */
-    RealPolynomialBound(int n_, int N_, const DPDEContainerType& container) : 
-                                                       ContainerType(modes2arraySizeStatic(2 * N_)), SubspaceType(modes2arraySizeStatic(n_), 
+    RealPolynomialBound(int n_, int N_, const DPDEContainerType& container, int w_ = 2) :
+                                                       ContainerType(modes2arraySizeStatic((w_+1) * N_)), SubspaceType(modes2arraySizeStatic(n_),
                                                        modes2arraySizeStatic(N_)), DPDEContainerType(container),
-                                                       n(n_), d(modes2arraySizeStatic(n_)), N(N_), D(modes2arraySizeStatic(N_)),
-                                                       farTail(n_, N_), realContainer(modes2realArraySizeStatic(n_)){
+                                                       n(n_), d(modes2arraySizeStatic(n_)), N(N_), D(modes2arraySizeStatic(N_)), w(w_),
+                                                       farTail(n_, N_), realContainer(modes2realArraySizeStatic(n_)),
+                                                       useAbsValues(false){
       infiniteDimensional = true;
       irProjection.setRange(0, capd::jaco::weak, n, capd::jaco::weak);
       irFiniteTail.setRange(n, capd::jaco::strong, N, capd::jaco::weak);
       irProjectionPlusFiniteTail.setRange(0, capd::jaco::weak, N, capd::jaco::weak);
-      irRedundantRange.setRange(N, capd::jaco::strong, 2 * N, capd::jaco::weak);
-      irFull.setRange(0, capd::jaco::weak, 2 * N, capd::jaco::weak);
+      irRedundantRange.setRange(N, capd::jaco::strong, (w+1) * N, capd::jaco::weak);
+      irFull.setRange(0, capd::jaco::weak, (w+1) * N, capd::jaco::weak);
     }
 
     RealPolynomialBound(const RealPolynomialBound& pb){
@@ -128,17 +134,18 @@ public:
     }
 
     ///wrapper function returns index in the array of modes from the lower subspace
-    inline int mode2array(const IndexType& k) const{
+    inline int mode2array(const IndexType& k, int dim_ = 0) const{
+      int dim = (dim_ == 0 ? (w+1) * N : dim_); //the factor here must be (w+1), because the redundant range dimension is (w+1)*N
       bool re=false;
       if(k.upperHalfspace())
-        return k.mode2array(n, re) / 2;
+        return k.mode2array(dim, re) / 2;
       else
-        return (-k).mode2array(n, re) / 2;
+        return (-k).mode2array(dim, re) / 2;
     }
 
     ///This is used instead of const operator[] to obtain value of a mode in the redundant range
     inline const ComplexScalarType redundantMode(const IndexType& index) const{
-      if(withinRedundantRange(index)){
+      if(irFull.withinRange(index)){
         if(index.upperHalfspace())
           return ContainerType::operator[](mode2array(index));
         return conjugate(ContainerType::operator[](mode2array(index)));
@@ -148,45 +155,28 @@ public:
       }
     }
 
-    /**If the given index is within redundant range (modes that are in far tail), but may be calculated explicitely, as when calculating
-     * convolution of two polynomial bounds.
-     */
-    inline bool withinRedundantRange(const IndexType& index) const{
-      if(infiniteDimensional){
-        if(NormType::squareNorm(index) > 4. * N * N)
-          return false;
-        return true;
-      }else{
-        if(NormType::squareNorm(index) > n * n)
-          return false;
-        return true;
-      }
-    }
-
-    inline bool withinFiniteTail(const IndexType& index) const{
-      if(irFiniteTail.withinRange(index))
-        return true;
-      return false;
-    }
-
     inline const ComplexScalarType operator[](const IndexType& index) const{
+      ComplexScalarType r;
       if(!farTail.inFarTail(index)){
         if(index.upperHalfspace()){
-          return ContainerType::operator[](mode2array(index));
+          r = ContainerType::operator[](mode2array(index));
         }else
-            return conjugate(ContainerType::operator[](mode2array(index)));
+            r = conjugate(ContainerType::operator[](mode2array(index)));
       }else{
-        if(!infiniteDimensional)
-          return ComplexScalarType(0.);
-        return farTail[index];
+        r = farTail[index];
       }
+
+      if((*this).useAbsValues){
+        return r.abs_supremum();
+      }else
+        return r;
     }
 
-    /**Not const version, can assign objects, but only indexed by an index in upper halfspace (which is stored explicitely, the
+    /**Not const version, can assign objects, but only indexed by an index in upper halfspace (which is stored explicitly, the
      * rest is obtained by the conjugacy condition a_k=\overline{a_{-k}}.
      */
     inline ComplexScalarType& operator[](const IndexType& index){
-      if(withinRedundantRange(index)){
+      if(irFull.withinRange(index)){
         if(index.upperHalfspace()){
           return ContainerType::operator[](mode2array(index));
         }
@@ -321,7 +311,7 @@ public:
     }
 
     inline void set(const IndexType& index, const ComplexScalarType& val){
-      if(withinRedundantRange(index)){
+      if(irFull.withinRange(index)){
         if(index.upperHalfspace()){
           ContainerType::operator[](mode2array(index)) = val;
         }else{
@@ -419,10 +409,12 @@ public:
     inline bool subset(const RealPolynomialBound& pb) const{
       IndexType index;
       for(index = firstModeIndex(irProjectionPlusFiniteTail); !index.limitReached(irProjectionPlusFiniteTail); index.inc(irProjectionPlusFiniteTail)){
-        if(! ((*this)[index]).re.subset(pb[index].re))
+        if(! ((*this)[index]).re.subset(pb[index].re)){
           return false;
-        if(! ((*this)[index]).im.subset(pb[index].im))
+        }
+        if(! ((*this)[index]).im.subset(pb[index].im)){
           return false;
+        }
       }
       return subsetFar(pb);
     }
@@ -435,9 +427,15 @@ public:
           out << index << ": " << pb[index] << "\n";
         }
       }else{
+        //printing out the whole redundant range
         for(index = pb.firstModeIndex(pb.irProjectionPlusFiniteTail); !index.limitReached(pb.irProjectionPlusFiniteTail); index.inc(pb.irProjectionPlusFiniteTail)){
           out << index << ": " << pb[index] << "\n";
+          //out << index.k[0] << " " << index.k[1] << " " <<rightBound(pb[index].mid().re) << "\n";
         }
+        /*out << "Redundant range:\n";
+        for(index = pb.firstModeIndex(pb.irRedundantRange); !index.limitReached(pb.irRedundantRange); index.inc(pb.irRedundantRange)){
+          out << index << ": " << pb.redundantMode(index) << "\n";
+        }*/
         out << "\nFarTail(" << pb.n << " - " << pb.N << "):\n" << pb.farTail << "\n";
 //      for debug purposes the redundant range is printed out (the range of modes from the far tail that were calculated explicitely)
 //      out << "Redundant range(" << pb.N << " - 2*" << pb.N << "):\n";
@@ -502,11 +500,34 @@ public:
       (*this)[i].setRightBound(d);
     }
 
+
+    inline const void split(RealPolynomialBound& c, RealPolynomialBound& r) const{
+      IndexType index;
+      for(index = firstModeIndex(irProjectionPlusFiniteTail); !index.limitReached(irProjectionPlusFiniteTail); index.inc(irProjectionPlusFiniteTail)){
+        (*this)[index].split(c[index], r[index]);
+        r[index] = r[index].supremum();
+      }
+      (DPDEContainer&)c = (DPDEContainer&)*this;
+      (SubspaceType&)c = (SubspaceType&)*this;
+      (DPDEContainer&)r = (DPDEContainer&)*this;
+      (SubspaceType&)r = (SubspaceType&)*this;
+      c.useAbsValues = false;
+      r.useAbsValues = true;
+      r.farTail = (*this).farTail;
+    }
+
+    inline void abs_supremum(RealPolynomialBound& abs){
+      IndexType index;
+      for(index = firstModeIndex(irProjectionPlusFiniteTail); !index.limitReached(irProjectionPlusFiniteTail); index.inc(irProjectionPlusFiniteTail)){
+        abs[index] = (*this)[index].abs_supremum();
+      }
+    }
+
+
     using SubspaceType::array2realPart;
     using SubspaceType::modes2realArraySizeStatic;
     using SubspaceType::modes2arraySizeStatic;
     using SubspaceType::array2modeIndex;
-    using SubspaceType::mode2array;
     using ContainerType::begin;
     using ContainerType::end;
     using ContainerType::size;

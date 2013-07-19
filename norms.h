@@ -20,8 +20,25 @@ class EuclideanNorm{
 public:
   typedef IndexT IndexType;
 
-  static double squareNorm(const IndexType& k){
+  template <class ScalarType>
+  static ScalarType norm(const IndexType& k){
+    return sqrt(k.squareEuclNorm());
+  }
+
+  static int squareNorm(const IndexType& k){
     return k.squareEuclNorm();
+  }
+
+  template <class ScalarType>
+  static ScalarType harmonic1DBound(const ScalarType& start, int s){
+    return (1. / (s - 1.)) * power(1. / start, s - 1.);
+  }
+
+  template <class ScalarType>
+  static ScalarType harmonic2DBound(const ScalarType& start, int s){
+    ScalarType sqrt2 = ScalarType(1.414213562373093, 1.414213562373095),
+               cd = 2 * ScalarType::pi(); //a constant depending on the dimension
+    return power((1 + sqrt2 /(2 * start)), s) * (cd / (s-2)) * power((start - sqrt2 / 2.), -(s-2)); //this line is hard-coded for 2D
   }
 
 };
@@ -32,8 +49,20 @@ class MaximumNorm{
 public:
   typedef IndexT IndexType;
 
-  static double squareNorm(const IndexType& k){
-    double k0sq = k[0] * k[0],
+  static int norm(const IndexType& k){
+    int max = 0;
+    int t;
+    if((t = abs(k[0])) > max)
+      max = t;
+    if((t = abs(k[1])) > max)
+      max = t;
+    if((t = abs(k[2])) > max)
+      max = t;
+    return max;
+  }
+
+  static int squareNorm(const IndexType& k){
+    int k0sq = k[0] * k[0],
            k1sq = k[1] * k[1],
            k2sq = k[2] * k[2],
            max=0;
@@ -45,6 +74,23 @@ public:
       max = k2sq;
     return max;
   }
+
+
+
+  template <class ScalarType>
+  static ScalarType harmonic1DBound(const ScalarType& start, int s){
+    return (1. / (s - 1.)) * power(1. / start, s - 1.);
+  }
+
+  template <class ScalarType>
+  static ScalarType harmonic2DBound(const ScalarType& start, int s){
+    if(s <= 2){
+      std::cerr << "harmonic2DBound in MaximumNorm class can not be called with s <= 2\n";
+      throw std::runtime_error("harmonic2DBound in MaximumNorm class can not be called with s <= 2\n");
+    }
+    return (2 * 2) / ((s - 2) * power((start - 1), s - 2 - 1)) ;
+  }
+
 };
 
 }

@@ -229,11 +229,11 @@ public:
   }
 
 
-  inline bool inTail(const IndexType& index) const{
+/*  inline bool inTail(const IndexType& index) const{
     if(index.squareNorm() > this->m*this->m)
       return true;
     return false;
-  }
+  }*/
 
   template <typename VectorType, typename TailType>
   inline typename capd::jaco::ComplexScalar<typename VectorType::ScalarType> mode(const IndexType& index, const VectorType& u, const TailType& tail) const{

@@ -14,10 +14,12 @@
 namespace capd {
 namespace jaco {
 
+
 /////All tails are dedicated to store complex valued tails and that are considered for symmetric Galerkin
 /////projection.
 /////We use operator()(int index, bool re) when we want to obtain value of i-th mode (index), real or imaginary part boolean re,
 /////We use operator[](int index) when explicit location in a table is provided by index.
+///07.07.2013 update: compatibility with higher dimensions than 1
 
 ///infinite part of a tail \prod_{|k|>M}
 template <typename ComplexScalarT, typename DimensionT>
@@ -26,6 +28,8 @@ public:
   typedef typename ComplexScalarT::ScalarType ScalarType;
   typedef typename DimensionT::IndexType IndexType;
   typedef ComplexScalarT ComplexScalarType;
+  typedef DimensionT DimensionType;
+  typedef typename DimensionT::NormType NormType;
 
   ScalarType m_c;
   int m_s;
@@ -141,7 +145,7 @@ public:
   }
 
   friend std::ostream& operator<<(std::ostream& out, const FarTail2& t) {
-    out << "far tail (k>" << t.M << "): \n|a_k| <= " << t.getC() << " / |k|^" << t.getS() << ", a_" << t.M+1 << "\n"; //" =" << t[IndexType(t.M+1)] << "\n";
+    out << "far tail (k>" << t.M << "): \n|a_k| <= " << t.getC() << " / |k|^" << t.getS() << ", a_" << t.M+1 << "=" << t.getC() / power(t.M + 1, t.getS()) << "\n";
     return out;
   }
   
@@ -157,16 +161,19 @@ inline bool FarTail2<ScalarT, DimensionT>::inFarTail(int index) const {
   return false;
 }
 
+/** 07.07.2013 this function is now higher dimension than 1 compatible
+ */
 template <typename ScalarT, typename DimensionT>
 inline bool FarTail2<ScalarT, DimensionT>::inFarTail(const IndexType& index) const {
-  if(index.squareEuclNorm() > this->M*this->M)
+  if(NormType::squareNorm(index) > this->M*this->M)
     return true;
   return false;
 }
 
+
 template <typename ScalarT, typename DimensionT>
 inline bool FarTail2<ScalarT, DimensionT>::subset(const FarTail2& ft2) const {
-  if(ft2.getS() > this->getS())
+  if(ft2.getS() > this->getS() && this->getC() != 0.)
     return false;
   int maxM = (this->M > ft2.getM() ? this->M : ft2.getM());
   if(this->operator()(maxM + 1, 1).subset(ft2(maxM + 1, 1)))

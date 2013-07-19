@@ -170,6 +170,11 @@ public:
     }
     return r;
   }
+
+
+
+
+
 };
 
 enum IncludeZero{withoutZero, withZero};
@@ -215,12 +220,25 @@ public:
 
   ///Number of components stored in the index
   virtual int components() const=0; 
+
+  template<class ScalarType>
+  inline ScalarType euclNorm() const{
+    ScalarType r = (*this).squareEuclNorm();
+    return sqrt(r);
+  }
   
-  inline double squareEuclNorm() const{
-    double r=k[0]*k[0];
+  int squareEuclNorm() const{
+    int r=k[0]*k[0];
     if(d()>1) r+=k[1]*k[1];
     if(d()>2) r+=k[2]*k[2];
     return r;
+  }
+
+  inline int maxNorm() const{
+    int max = abs(k[0]);
+    if(d() > 1 && abs(k[1]) > max) max = abs(k[1]);
+    if(d() > 2 && abs(k[2]) > max) max = abs(k[2]);
+    return max;
   }
 
   Index& operator=(const Index& i2){
@@ -579,6 +597,36 @@ public:
     index[0] = -m;
     return index;
   }
+
+  /**returns
+    *\f[
+    *\sum_{k\in{range}}{\frac{1}{|k|^s}}, where k, k_1 are 2D indices
+    *\f]
+    */
+   template <class ScalarType, class IndexRangeT, class NormT>
+   static ScalarType harmonicSumK_1(const IndexRangeT& range, int s){
+     if(!range.k_1UptoInfinity()){
+       std::cerr << "forbidden call of harmonicSumK_1 with range which is not upto infinity.\n";
+       throw std::runtime_error("forbidden call of harmonicSumK_1 with range which is not upto infinity.\n");
+     }
+     ScalarType start = (range.k_1IneqLeft == strong ? range.k_1NormLeft : range.k_1NormLeft + 1);
+     return NormT::harmonic2DBound(start, s);
+   }
+
+   /**returns
+     *\f[
+     *\sum_{k\in{range}}{\frac{1}{|k|^s}}, where k, k_1 are 2D indices
+     *\f]
+     */
+    template <class ScalarType, class IndexRangeT, class NormT>
+    static ScalarType harmonicSumKmk_1(const IndexRangeT& range, int s){
+      if(!range.k_1UptoInfinity()){
+        std::cerr << "forbidden call of harmonicSumK_1 with range which is not upto infinity.\n";
+        throw std::runtime_error("forbidden call of harmonicSumK_1 with range which is not upto infinity.\n");
+      }
+      ScalarType start = (range.kmk_1IneqLeft == strong ? range.kmk_1NormLeft : range.kmk_1NormLeft + 1);
+      return NormT::harmonic2DBound(start, s);
+    }
 
 };
 

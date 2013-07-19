@@ -47,6 +47,7 @@ capd::auxil::OutputStream tailDebug(std::cout, false, true); //OutputStream for 
 capd::auxil::OutputStream NDebug(std::cout, false, true);
 capd::auxil::OutputStream generalDebug2(std::cout, false, true);
 capd::auxil::OutputStream fftDebug(std::cout, false, true);
+
 extern inline void setLoggers(){
   generalDebug.logfile("general.txt", true);
   generalDebug.log = true;
