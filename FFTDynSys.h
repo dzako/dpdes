@@ -347,7 +347,7 @@ public:
     //below set the internal CAPD representation of the remainder
     basicDynSys.remainder(o_rem);
 //    generalDebug << "rem: " << o_rem << "\n";
-    //below set the internal CAPD representation of \Phi([x]) 
+    //below set the internal CAPD representation of \Phi( m([x]) )
     jetDynSys.current(o_phi);
     //below set the internal CAPD representation of the partial derivative matrix \frac{\partial \Phi([x])}{\partial x} 
     currentD(o_jacPhi);

@@ -252,10 +252,12 @@ public:
       return *this;
     }
 
-    //TODO: IMPORTANT - this is exactly what the C++ predefined operator is doing
+    //07.08.2013 CHECKED THIS IS THE SAME AS DEFAULT OPERATOR= CONSTRUCTOR
+    //
+    //IMPORTANT - this is exactly what the C++ predefined operator is doing
     //check if the C++ predefined operator is calling (DPDEContainer&)*this = (DPDEContainer&)hmc; 
     //and (SubspaceType&)*this = (SubspaceType&)hmc; 
-    inline RealPolynomialBound& operator=(const RealPolynomialBound& rct){
+    /*inline RealPolynomialBound& operator=(const RealPolynomialBound& rct){
       (DPDEContainer&)*this = (DPDEContainer&)rct;
       (ContainerType&)*this = (ContainerType&)rct;
       (SubspaceType&)*this = (SubspaceType&)rct;
@@ -271,8 +273,9 @@ public:
       realContainer = rct.realContainer;
       infiniteDimensional = rct.infiniteDimensional;
       farTail = rct.farTail;
+      useAbsValues = rct.useAbsValues;
       return *this;
-    }
+    }*/
 
     inline RealPolynomialBound& operator=(const RealContainerType& rct){
       IndexType index;

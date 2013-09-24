@@ -296,6 +296,14 @@ public:
       m_N_coeff=-1.;
     }
 
+    SH(int m, int M, RealType nu_) : SubspaceType(m, M), nu(nu_), S_DISSIPATIVE(-0.01){
+      m_p=4.;
+      m_d=1.;
+      m_r=0.;
+      m_sufficientlyLarge=m_d+m_p+1;
+      m_N_coeff=-1.;
+    }
+
     RealType ni(int k) const{  IndexType j=array2modeIndex(k); double sqN=j.squareEuclNorm(); return (j.isZero() ? 0 : 1 - 2./sqN + (1-nu)/(sqN*sqN)); }
 
     RealType ni(const IndexType& k) const{ double sqN=k.squareEuclNorm(); return (k.isZero() ? 0 : 1 - 2./sqN + (1-nu)/(sqN*sqN)); }
@@ -348,12 +356,18 @@ public:
 /** This is a class representing a nonlinear PDE (this is the input to the integrator). It is the base for other classes representing
  * pdes consisting higher order nonlinear term.
  *
- * Linear part is a ''Laplacian'' (may be higher order, like in KS-equation), and nonlinear part is a polynomial
- * which d.epends on (u, u_x, u_{xx},...). Linear part dominates (order of the derivative in the ''Laplacian'' operator
- * is higher than all the derivative orders that appear in the nonlinear part polynomial.
+ * Elliptic part is a linear operator, and nonlinear part is the second degree polynomial and its derivatives
+ * u^2
+ * (u^2)_x
+ * (u^2)_{xx}
+ * etc...
+ *
+ * Elliptic part dominates the nonlinear part, in sense the maximal order of the derivative in the elliptic operator is larger than the
+ * order of the derivative of u^2 in the nonlinear part.
  *
  * EquationT class defines what specific equation this is. Like for example what are eigenvalues and what is constant in front
- * of the nonlinear term, and what derivatives the nonlinear term contains.
+ * of the nonlinear term, and what is the order of the polynomial in the nonlinearity.
+ * In particular the value m_r in EquationT defines the order of the derivative of u^2 in the nonlinear part (>= 0).
  *
  * FFTT is a FFT class.
  *
@@ -536,8 +550,11 @@ public:
     ScalarT::switchToComplexValued();
     fft1.fastInverseTransform(rhs, rhsSeries);
     generalDebug2 << "rhsSeries:\n" << rhsSeries << "\n";
-    //here we cannot switch to real valued, because multiplication by i (switches zeros re to/from im)   
-    rhsSeries *= (Ncoeff()) * (ComplexScalarType::i());
+    //here we cannot switch to real valued, because multiplication by i (switches zeros re to/from im)
+    ComplexScalarType constant = Ncoeff();
+    for(j = 0; j < this->m_r; j++)
+      constant *= ComplexScalarType::i();
+    rhsSeries *= constant;
     if(ScalarT::initialConditionIsRealValued())
       ScalarT::switchToRealValued();
     multiplyComponents(rhsSeries);    
@@ -599,10 +616,12 @@ public:
   inline void multiplyComponents(const ModesContainerType& pb, ModesContainerType& r) const{
     r = pb;
     IndexType i;
-    const IndexRangeType& range((pb.infiniteDimensional ? ir_M : ir_m));
-    r[IndexType(0)] *= ComplexScalarType(0);
-    for(i = firstModeIndex(range); !i.limitReached(range); i.inc(range)){
-      r[i] *= ComplexScalarType(i[0]);
+    if( this->m_r > 0 ){
+      const IndexRangeType& range((pb.infiniteDimensional ? ir_M : ir_m));
+      r[IndexType(0)] *= ComplexScalarType(0);
+      for(i = firstModeIndex(range); !i.limitReached(range); i.inc(range)){
+        r[i] *= ComplexScalarType( power(i[0], this->m_r) );
+      }
     }
   }
 
@@ -613,9 +632,11 @@ public:
   inline void multiplyComponents(ModesContainerType& pb) const{
     IndexType i;
     const IndexRangeType& range((pb.infiniteDimensional ? ir_M : ir_m));
-    pb[IndexType::zero()] *= ComplexScalarType(0);
-    for(i = firstModeIndex(range); !i.limitReached(range); i.inc(range)){
-      pb[i] *= ComplexScalarType(i[0]);
+    if( this->m_r > 0 ){
+      pb[IndexType::zero()] *= ComplexScalarType(0);
+      for(i = firstModeIndex(range); !i.limitReached(range); i.inc(range)){
+        pb[i] *= ComplexScalarType( power(i[0], this->m_r) );
+      }
     }
   }
 
@@ -623,7 +644,7 @@ public:
    */
   inline void multiplyComponentsFarTail(ModesContainerType& pb) const{
     if(pb.infiniteDimensional){
-      setS(pb, s(pb) - 1);
+      setS(pb, s(pb) - this->m_r); //substracts m_r (constant depending on the order of the nonlinearity derivative) from s(pb)
     }
   }
 
@@ -1120,7 +1141,10 @@ public:
     multiplyComponents(out);
     if(in.infiniteDimensional)
       multiplyComponentsFarTail(out);
-    out *= (ComplexScalarType::i() * Ncoeff());
+    ComplexScalarType constant = Ncoeff();
+    for(int j = 0; j < this->m_r; j++)
+      constant *= ComplexScalarType::i();
+    out *= constant;
   }
 
   inline void CalculateNonlinearTermDirectly(const ModesContainerType& in, ModesContainerType& out, int range = full){
@@ -1195,8 +1219,10 @@ public:
     }
     if(range != redundantRange) multiplyComponents(out);
 
-
-    out *= (ComplexScalarType::i() * Ncoeff()); //multiplication by a coefficient in front of the convolution sum
+    ComplexScalarType constant = Ncoeff();
+    for(int j = 0; j < this->m_r; j++)
+      constant *= ComplexScalarType::i();
+    out *= constant; //multiplication by a coefficient in front of the convolution sum
   }
 
   inline void CalculateNonlinearTermDirectly(const ModesContainerType& in1, const ModesContainerType& in2, ModesContainerType& out, int range = full){
@@ -1227,7 +1253,11 @@ public:
       multiplyComponentsFarTail(out);
     }
     if(range != redundantRange) multiplyComponents(out);
-    out *= (ComplexScalarType::i() * Ncoeff());
+
+    ComplexScalarType constant = Ncoeff();
+    for(int j = 0; j < this->m_r; j++)
+      constant *= ComplexScalarType::i();
+    out *= constant;
   }
 
   inline void CalculatePerturbationsDirectly(const PolyBdType& in, VectorType& out){
@@ -1259,7 +1289,10 @@ public:
         tpb[k] = sum;
     }
     multiplyComponents(tpb);
-    tpb *= (ComplexScalarType::i() * Ncoeff());
+    ComplexScalarType constant = Ncoeff();
+    for(int j = 0; j < this->m_r; j++)
+      constant *= ComplexScalarType::i();
+    tpb *= constant;
     copyFinitePart(tpb, out);
   }
 
@@ -1719,14 +1752,34 @@ class DPDE22DCompatible : public DPDE2<EquationT, FFTT, ORD>{
 
 
 
-/**This class represents a PDE consisting a nonlinear part which is a third order polynomial. For the description see
- * DPDE2 class.
+/** This is a class representing a nonlinear PDE (this is the input to the integrator). It is the base for other classes representing
+ * pdes consisting higher order nonlinear term.
  *
+ * Elliptic part is a linear operator, and nonlinear part is the third degree polynomial and its derivatives
+ * u^3
+ * (u^3)_x
+ * (u^3)_{xx}
+ * etc...
+ *
+ * Elliptic part dominates the nonlinear part, in sense the maximal order of the derivative in the elliptic operator is larger than the
+ * order of the derivative of u^3 in the nonlinear part.
+ * * In particular the value m_r in EquationT defines the order of the derivative of u^3 in the nonlinear part (>= 0).
+ *
+ * EquationT class defines what specific equation this is. Like for example what are eigenvalues and what is constant in front
+ * of the nonlinear term, and what is the order of the polynomial in the nonlinearity.
+ *
+ * FFTT is a FFT class.
+ *
+ * ORD is the maximal order.
+ *
+ * When VNormT is set to EuclideanNorm the program intentionally will not compile (because of efficiency reasons - the
+ * function norm is not returning int anymore, it must return interval)  - but the case of EculideanNorm was tested too
  */
-template<class EquationT, class FFTT, int ORD>
+template<class EquationT, class FFTT, int ORD, class VNormT=capd::jaco::MaximumNorm<typename FFTT::IndexType> >
 class DPDE3 : public DPDE2<EquationT, FFTT, ORD>{
 public:
-  typedef DPDE2<EquationT, FFTT, ORD> BaseClass;
+  typedef DPDE2<EquationT, FFTT, ORD, VNormT> BaseClass;
+  typedef VNormT VNormType;
   typedef typename BaseClass::RealType RealType;
   typedef typename BaseClass::GridsContainerType GridsContainerType;
   typedef typename BaseClass::ModesContainerContainerType ModesContainerContainerType;
@@ -1751,8 +1804,28 @@ public:
   ModesContainerType tmc2;///<auxiliary variable
   ModesContainerType tmc3;///<auxiliary variable
   
-  DPDE3(int m_, int M_, int dftPts1_, int dftPts2_, RealType nu_, RealType pi_, int order, bool initializeHigherDFT = true)
-  : BaseClass(m_, M_, dftPts1_, dftPts2_, nu_, pi_, initializeHigherDFT), convolutions(order+1),
+  /**The constructor for FINITE dimensional integrator - only the projection is taken into account
+   */
+  DPDE3(int m_, int dftPts1_, RealType nu_, RealType pi_, int order) : BaseClass(m_, dftPts1_, nu_, pi_, order), convolutions(order+1),
+      tpb2(m_, m_), tpb3(m_, m_), tmcN(m_), tmc(2 * m_), tmc2(2 * m_), tmc3(m_){
+    int i;
+    for(i=0; i <= order; ++i){
+      convolutions[i] = DFTGridType(dftPts1_);
+    }
+  }
+
+
+  /**The constructor for INFINITE dimensional integrator (differential inclusion, with tails etc...)
+   *
+   * w is the constant >= 2 from the paper , which appears in the G set definition, i.e. G(wM)
+   *
+   * dftPts3 is the number of points used by FFT for calculating the polynomial bounds convolutions , this number
+   * >= (w + 1)*dftPts2,
+   *
+   * when dftPts3 == w*dftPts2 terms such that a_k\in G(m) and b_{k-k_1}\nin G(w*M) are missing in the FFT result
+   */
+  DPDE3(int m_, int M_, int dftPts1_, int dftPts2_, RealType nu_, RealType pi_, int order, bool initializeHigherDFT = true, int w_ = 2)
+  : BaseClass(m_, M_, dftPts1_, dftPts2_, nu_, pi_, order, initializeHigherDFT, w_), convolutions(order+1),
     tpb2(m, M), tpb3(m, M), tmcN(m), tg3_3(2 * dftPts2_), tg3_4(2 * dftPts2_), tg3_5(2 * dftPts2_), tmc(2*m_), tmc2(2*m_), tmc3(m_){
     int i;
     for(i=0; i <= order; ++i){
@@ -1809,12 +1882,17 @@ public:
     if(grids[0].isRealValued()) ///optimizing thing
       ScalarT::switchToComplexValued();
     fft1.fastInverseTransform(rhs, rhsSeries);    
+
     //here we cannot switch to real valued, because multiplication by i (switches zeros re to/from im)
-    rhsSeries *= Ncoeff();
+    ComplexScalarType constant = Ncoeff();
+    for(int j = 0; j < this->m_r; j++)
+      constant *= ComplexScalarType::i();
+    rhsSeries *= constant;
+
 
     if(rhsSeries.isRealValued())
       ScalarT::switchToRealValued();
-//    multiplyComponents(rhsSeries);
+    this->multiplyComponents(rhsSeries);
 
     IndexType index;
     for(index = firstModeIndex(ir_m); !index.limitReached(ir_m); index.inc(ir_m)) {
@@ -1846,7 +1924,14 @@ public:
        if(j == 0) rhsSeries = tmc3;
        else rhsSeries += tmc3;
      }
-     rhsSeries *= Ncoeff();
+
+     this->multiplyComponents(rhsSeries);
+
+     ComplexScalarType constant = Ncoeff();
+     for(int j = 0; j < this->m_r; j++)
+       constant *= ComplexScalarType::i();
+     rhsSeries *= constant;
+
      IndexType index;
       for(index = firstModeIndex(ir_m); !index.limitReached(ir_m); index.inc(ir_m)) {
         rhsSeries.set(index, rhsSeries[index] + lambda_k(index) * modes[i][index]);
@@ -2004,7 +2089,7 @@ public:
     * \f]
     */
    inline void addL2Bound(const ModesContainerType& in, DFTGridType& out) const{
-     RealType harmonicSum = IndexType::template harmonicSumK_1<RealType, IndexRangeType>(ir_overFft3, s(in)),  
+     RealType harmonicSum = IndexType::template harmonicSumK_1<RealType, IndexRangeType, VNormType>(ir_overFft3, s(in)),
               t(-rightBound(2 * C(in) * harmonicSum), 
                   rightBound(2 * C(in) * harmonicSum));
      ComplexScalarType r;

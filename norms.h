@@ -88,7 +88,7 @@ public:
       std::cerr << "harmonic2DBound in MaximumNorm class can not be called with s <= 2\n";
       throw std::runtime_error("harmonic2DBound in MaximumNorm class can not be called with s <= 2\n");
     }
-    return (2 * 2) / ((s - 2) * power((start - 1), s - 2 - 1)) ;
+    return (4 * 2) / ((s - 2) * power((start - 1), s - 2)) ;
   }
 
 };

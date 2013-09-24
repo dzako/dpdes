@@ -323,6 +323,31 @@ public:
     ///this->T0 = T0;///???
   }
 
+
+  ///07.08.2013 temporary printing C++ code that creates this matrix for the purpose of test program
+  void printMatrix(const MatrixType& J, capd::auxil::OutputStream& out) const{
+    int rows = J.numberOfRows(),
+        cols = J.numberOfColumns();
+
+    for(int i = 0; i < rows; i++){
+      for(int j = 0; j < cols; j++){
+        bool dot = (J[i][j] == 0. ? true : false);
+        out << "J[" << i << "][" << j << "]=" << "Scalar(" << J[i][j].leftBound() << (dot ? "." : "") << ", " << J[i][j].rightBound() << (dot ? "." : "") << ");";
+      }
+      out << "\n";
+    }
+
+  }
+
+  ///07.08.2013 temporary printing C++ code that creates this vector for the purpose of test program
+  void printVector(const VectorType& C, capd::auxil::OutputStream& out) const{
+    int size = C.size();
+    for(int i = 0; i < size; i++){
+      bool dot = (C[i] == 0. ? true : false);
+      out << "C[" << i << "]=" << "Scalar(" << C[i].leftBound() << (dot ? "." : "") << ", " << C[i].rightBound() << (dot ? "." : "") << ");\n";
+    }
+  }
+
   ///calculates the [\Delta] in the step 8 of Algorithm 1.
   ///Input
   ///-x, as in the description of Algorithm 1,
@@ -368,6 +393,10 @@ public:
     {///step 6
     C = rightVector(abs(delta));
     }///end of step 6    
+
+    inclDebug << "found C:\n" << C << "\n";
+    printVector(C, inclDebug);
+
     int i, j;
     MatrixType J;
     {///step 7
@@ -381,7 +410,8 @@ public:
       }
     }
     }///end of step 7
-    generalDebug << "found J:\n" << J << "\n";
+    inclDebug << "found J:\n" << J << "\n";
+    printMatrix(J, inclDebug);
     getDynamicalSystem().setYc(y_c); ///setting y_c for the next step, when the solution of the Cauchy problem with y_c
                                            ///is calculated.    
     {///step 8
@@ -420,6 +450,7 @@ public:
 
     }///end of step 8
     generalDebug<<"found Deltha:\n";
+    inclDebug << "found Deltha:\n" << result << "\n";
     m_diffIncl.printModes(result, generalDebug);
     return result;
   }

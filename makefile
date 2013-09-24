@@ -1,6 +1,6 @@
 # a list of all the programs in your project 
-PROGS = 2DIntegratorTest IndicesTests ExactFFTTest FFTTests PolyBd2DTests KSPOTest
-#PROGS = KSPOTest
+PROGS = 2DIntegratorTest IndicesTests ExactFFTTest FFTTests PolyBd2DTests KSPOTest SHTest CHTest
+#PROGS = CHTest
 
 # a list of all your units to be linked with your programs (space separated)
 OTHERS =

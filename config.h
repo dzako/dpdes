@@ -47,10 +47,11 @@ capd::auxil::OutputStream tailDebug(std::cout, false, true); //OutputStream for 
 capd::auxil::OutputStream NDebug(std::cout, false, true);
 capd::auxil::OutputStream generalDebug2(std::cout, false, true);
 capd::auxil::OutputStream fftDebug(std::cout, false, true);
+capd::auxil::OutputStream inclDebug(std::cout, false, true);
 
 extern inline void setLoggers(){
   generalDebug.logfile("general.txt", true);
-  generalDebug.log = true;
+  generalDebug.log = false;
   generalDebug2.logfile("general2.txt", true);
   generalDebug2.log = false;
   enclosureDebug.logfile("enclosure.txt", true);
@@ -61,6 +62,8 @@ extern inline void setLoggers(){
   NDebug.log = false;
   fftDebug.logfile("fft.txt", true);
   fftDebug.log = false;
+  inclDebug.logfile("inclData.txt", true);
+  inclDebug.log = false;
   
   if(__COUNT_OPERATIONS__){
     clearSums();

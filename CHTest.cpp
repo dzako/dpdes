@@ -1,7 +1,11 @@
 /*
- *  Created on: Sep 14, 2011
+ * CahnHillardTest.cpp
+ *
+ *  Created on: Sep 23, 2013
  *      Author: cyranka
  */
+
+
 #include <time.h>
 #include <math.h>
 #include <stdlib.h>
@@ -100,25 +104,17 @@ void calculateDiams(const IntervalVector& v, Interval& maxD){
 }
 
 void inclPOTest(int testNumber, int approach){
-  //SETTINGS FOR LARGE STEP (AND ORDER)
-/*  int m = 23, //change FOJ1D stack dimension
+  int m = 23, //change FOJ1D stack dimension
       M = 69,
       dftPts = 48,
       dftPts2 = 150,
       order = 23;
   Interval nu(0.032),
-           step(0.0011);*/
-  int m = 23, //change FOJ1D stack dimension
-        M = 69,
-        dftPts = 64,
-        dftPts2 = 150,
-        order = 5;
-    Interval nu(0.032),
-             step(0.00015);
+           step(0.0011);
 
   ///1.initialize FOJ, the dimension of the first order jet and the initial condition type defined by a DPDEContainer instance
   ///should be provided, see FOJ1D::initialize description
-  
+
   ///begin FOJ initialization for FFT integrator
   capd::jaco::DPDEContainer container;
   ///2.set here the subspace of the initial condition e.g. setToRealValuedOdd means that the initial condition is real valued odd
@@ -127,9 +123,9 @@ void inclPOTest(int testNumber, int approach){
   ///end FOJ initialization
 
   clock_t start, end;
-  
+
   DPDEInclusionCW3 diffIncl(m, dftPts, M, dftPts2, PI, nu, order, step, MaxNorm());
-  
+
   double diam;
   capd::auxil::OutputStream log(std::cout, false, true);
   std::stringstream ss;
@@ -182,137 +178,21 @@ void inclPOTest(int testNumber, int approach){
       log << "Using the FFT approach, but the first order normalized derivative is calculated directly to avoid a blowup\n";
     }
   }
-  
-  Interval unit(-1, 1);  
+
+  Interval unit(-1, 1);
   Interval r(-diam/2, diam/2);
   Index1D idx;
   RealPolynomialBound u_0(m, M, container), enclosure(m);
-  
-  //an another periodic orbit
-  //nu=0.127 stb
-//  idx[0] = 1;
-//  u_0[dpde.mode2array(idx, 0)] =  Interval(0.20121)+r;
-//  idx[0] = 2;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(1.28998)+r;
-//  idx[0] = 3;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(0.20121)+r;
-//  idx[0] = 4;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(-0.377866)+r;
-//  idx[0] = 5;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(-0.0423095)+r;
-//  idx[0] = 6;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(0.0431619)+r;
-//  idx[0] = 7;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(0.00694169)+r;
-//  idx[0] = 8;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(-0.00415743)+r;
-//  idx[0] = 9;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(-0.000796969)+r;
-//  idx[0] = 10;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(0.000331914)+r;
-  idx[0] = 1;
-  u_0[idx].im =  Interval(0.350668)+r;
-  idx[0] = 2;
-  u_0[idx].im = Interval(0.0252289)+r;
-  idx[0] = 3;
-  u_0[idx].im = Interval(0.350668)+r;
-  idx[0] = 4;
-  u_0[idx].im = Interval(-2.27674)+r;
-  idx[0] = 5;
-  u_0[idx].im = Interval(-1.11533)+r;
-  idx[0] = 6;
-  u_0[idx].im = Interval(-0.369307)+r;
-  idx[0] = 7;
-  u_0[idx].im = Interval(0.460388)+r;
-  idx[0] = 8;
-  u_0[idx].im = Interval(-0.460455)+r;
-  idx[0] = 9;
-  u_0[idx].im = Interval(-0.311502)+r;
-  idx[0] = 10;
-  u_0[idx].im = Interval(-0.14496)+r;
-  idx[0] = 11;
-  u_0[idx].im = Interval(0.0510489)+r;
-  idx[0] = 12;
-  u_0[idx].im = Interval(-0.021659)+r;
-  idx[0] = 13;
-  u_0[idx].im = Interval(-0.0341329)+r;
-  idx[0] = 14;
-  u_0[idx].im = Interval(-0.0261352)+r;
-  idx[0] = 15;
-  u_0[idx].im = Interval(0.00130753)+r;
-  idx[0] = 16;
-  u_0[idx].im = Interval(8.74462e-005)+r;
-  idx[0] = 17;
-  u_0[idx].im = Interval(-0.00211553)+r;
-  idx[0] = 18;
-  u_0[idx].im = Interval(-0.00289166)+r;
-  idx[0] = 19;
-  u_0[idx].im = Interval(-0.000500848)+r;
-  idx[0] = 20;
-  u_0[idx].im = Interval(3.35395e-005)+r;
-  idx[0] = 21;
-  u_0[idx].im = Interval(-4.42524e-005)+r;
-  idx[0] = 22;
-  u_0[idx].im = Interval(-0.000228317)+r; 
-  idx[0] = 23;
-  u_0[idx].im = Interval(-9.03847e-005)+r;
-  u_0[24] = -8.072115e-05 + r;// 1.308558e-04*unit;   
-  u_0[25] = 4.061472e-08 + r;// 9.198090e-05*unit;   
-  u_0[26] = -1.771179e-05 + r;//3.554454e-05*unit; 
-  u_0[27] = 2.160790e-08 + r;//2.349743e-05*unit;
-  u_0[28] = -7.683240e-06 + r;//1.260077e-05*unit;   
-  u_0[29] = 2.596207e-08 + r;//9.292410e-06*unit;
-  u_0[30] = -2.010571e-06 + r;//3.919528e-06*unit;
-  u_0[31] = 6.457350e-10 + r;//2.345435e-06*unit;
-  u_0[32] = -6.027532e-07 + r;//1.234009e-06*unit;
-  u_0[33] = -1.827155e-10 + r;//9.444884e-07*unit;
-  u_0[34] = -1.912217e-07 + r;//4.313323e-07*unit;
-  u_0[35] = 3.132762e-10 + r;//2.868533e-07*unit;
-  u_0[36] = -4.913630e-08 + r;//1.266784e-07*unit;
-  u_0[37] = -9.639931e-11 + r;//8.683696e-08*unit;
-  u_0[38] = -1.765817e-08 + r;//4.377705e-08*unit;
-  u_0[39] = 5.956034e-11 + r;//2.952584e-08*unit;
-  u_0[40] = -4.319419e-09 + r;//1.356505e-08*unit;
-  u_0[41] = -5.973398e-13 + r;//8.370721e-09*unit;
-  u_0[42] = -1.504751e-09 + r;//4.220192e-09*unit;
-  u_0[43] = 1.344236e-12 + r;//2.861523e-09*unit;
-  u_0[44] = -3.968956e-10 + r;//1.380749e-09*unit;  
-  u_0[45] = 1.644704e-12 + r;//8.409932e-10*unit;
-  u_0[46] = -1.194526e-10 + r;//4.089145e-10*unit;
-  u_0[47] = 5.600085e-14 + r;//2.657488e-10*unit;
-  u_0[48] = -3.735948e-11 + r;//1.302601e-10*unit;
-  u_0[49] = 6.923386e-14 + r;//8.303362e-11*unit;
-  u_0[50] = -1.115027e-11 + r;//3.944118e-11*unit;
-  u_0[51] = 7.625038e-15 + r;//2.587359e-11*unit;
-  u_0[52] = -3.235955e-12 + r;//1.367747e-11*unit;
-  u_0[53] = 5.355447e-15 + r;//9.556918e-12*unit;
-  u_0[54] = -8.851600e-13 + r;//6.710554e-12*unit;
-  u_0[55] = 8.157066e-15 + r;//7.432209e-12*unit;
-  u_0[56] = -2.575738e-13 + r;//1.124376e-11*unit;
-  u_0[57] = -1.227735e-14 + r;//1.289762e-11*unit;
-  u_0[58] = -7.847187e-14 + r;//2.020907e-11*unit;
-  u_0[59] = -9.994174e-16 + r;//2.716484e-11*unit;
-  u_0[60] = -2.302107e-14 + r;//5.846583e-11*unit;
-  u_0[61] = -1.752133e-15 + r;//7.916104e-11*unit;
-  u_0[62] = -6.511992e-15 + r;//1.314991e-10*unit;
-  u_0[63] = -3.185013e-16 + r;//1.656574e-10*unit;
-  u_0[64] = -1.860478e-15 + r;//2.432627e-10*unit;
-  u_0[65] = 1.817169e-16 + r;//3.177145e-10*unit;
-  u_0[66] = -5.958659e-16 + r;//4.635467e-10*unit;
-  u_0[67] = -3.186116e-17 + r;//4.507650e-10*unit;
-  u_0[68] = -1.644389e-16 + r;//3.785445e-10*unit;
-  u_0[69] = -8.100358e-18 + r;//3.550455e-10*unit;
-  u_0.setToRealValuedOdd();
-  setC(u_0, 5.039534e+15);
-  setS(u_0, 12);
+
+
   log << "initial condition (infinite dimensional):\n" << u_0 << "\nitegration started, the output below is the Galerkin projection of the set at each timestep\n";
-  double retTime = 4.093009e-001;
+  double retTime = 0.1;
   int i;
   InclRect2Set set(u_0);
   IntervalMatrix mx(m, m);
   Interval max;
-  int STEPS// = 100;
-  		   = 4092;
+  int STEPS = 100;
+           //= 4092;
            //=1;
 
   start = clock();
@@ -320,15 +200,12 @@ void inclPOTest(int testNumber, int approach){
     std::cout << "step #" << i << " ";
     set.move(diffIncl);
     log << (IntervalVector)set << "\n";
-    if(i * step > retTime){      
+    if(i * step > retTime){
       std::cout << "Return time passed, full revolution of the orbit\n";
       break;
     }
-//    if(i*step > retTime - 0.003){
-//      generalDebug.log = true;
-//      tailDebug.log = true;
-//    }
-  }  
+
+  }
   log << "\nset at the end (infinite dimensional): " << set.getPerturbationParams() << "\n";
   calculateDiams((IntervalVector)set, max);
   log << "max diameter of the set at the end: " << max << "\n";
@@ -345,7 +222,7 @@ void basicPOTest(int testNumber, int approach){
 
   ///1.initialize FOJ, the dimension of the first order jet and the initial condition type defined by a DPDEContainer instance
   ///should be provided, see FOJ1D::initialize description
-  
+
   ///begin FOJ initialization for FFT integrator
   capd::jaco::DPDEContainer container;
   ///2.set here the subspace of the initial condition e.g. setToRealValuedOdd means that the initial condition is real valued odd
@@ -354,9 +231,9 @@ void basicPOTest(int testNumber, int approach){
   ///end FOJ initialization
 
   clock_t start, end;
-  
+
   FFTDynSys dynsys( m, M, step, order, PI, nu);
-  
+
   double diam;
   capd::auxil::OutputStream log(std::cout, false, true);
   std::stringstream ss;
@@ -409,82 +286,14 @@ void basicPOTest(int testNumber, int approach){
       log << "Using the FFT approach, but first order is calculated directly to avoid a blowup\n";
     }
   }
-  
-    
+
+
   Interval r(-diam/2, diam/2);
   Index1D idx;
   RealPolynomialBound u_0(m), enclosure(m);
-  
-  //an another periodic orbit
-  //nu=0.127 stb
-//  idx[0] = 1;
-//  u_0[dpde.mode2array(idx, 0)] =  Interval(0.20121)+r;
-//  idx[0] = 2;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(1.28998)+r;
-//  idx[0] = 3;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(0.20121)+r;
-//  idx[0] = 4;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(-0.377866)+r;
-//  idx[0] = 5;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(-0.0423095)+r;
-//  idx[0] = 6;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(0.0431619)+r;
-//  idx[0] = 7;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(0.00694169)+r;
-//  idx[0] = 8;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(-0.00415743)+r;
-//  idx[0] = 9;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(-0.000796969)+r;
-//  idx[0] = 10;
-//  u_0[dpde.mode2array(idx, 0)] = Interval(0.000331914)+r;
-  idx[0] = 1;
-  u_0[idx].im =  Interval(0.350668)+r;
-  idx[0] = 2;
-  u_0[idx].im = Interval(0.0252289)+r;
-  idx[0] = 3;
-  u_0[idx].im = Interval(0.350668)+r;
-  idx[0] = 4;
-  u_0[idx].im = Interval(-2.27674)+r;
-  idx[0] = 5;
-  u_0[idx].im = Interval(-1.11533)+r;
-  idx[0] = 6;
-  u_0[idx].im = Interval(-0.369307)+r;
-  idx[0] = 7;
-  u_0[idx].im = Interval(0.460388)+r;
-  idx[0] = 8;
-  u_0[idx].im = Interval(-0.460455)+r;
-  idx[0] = 9;
-  u_0[idx].im = Interval(-0.311502)+r;
-  idx[0] = 10;
-  u_0[idx].im = Interval(-0.14496)+r;
-  idx[0] = 11;
-  u_0[idx].im = Interval(0.0510489)+r;
-  idx[0] = 12;
-  u_0[idx].im = Interval(-0.021659)+r;
-  idx[0] = 13;
-  u_0[idx].im = Interval(-0.0341329)+r;
-  idx[0] = 14;
-  u_0[idx].im = Interval(-0.0261352)+r;
-  idx[0] = 15;
-  u_0[idx].im = Interval(0.00130753)+r;
-  idx[0] = 16;
-  u_0[idx].im = Interval(8.74462e-005)+r;
-  idx[0] = 17;
-  u_0[idx].im = Interval(-0.00211553)+r;
-  idx[0] = 18;
-  u_0[idx].im = Interval(-0.00289166)+r;
-  idx[0] = 19;
-  u_0[idx].im = Interval(-0.000500848)+r;
-  idx[0] = 20;
-  u_0[idx].im = Interval(3.35395e-005)+r;
-  idx[0] = 21;
-  u_0[idx].im = Interval(-4.42524e-005)+r;
-  idx[0] = 22;
-  u_0[idx].im = Interval(-0.000228317)+r;
-  idx[0] = 23;
-  u_0[idx].im = Interval(-9.03847e-005)+r;
-  
-  double retTime = 4.093009e-001;
+
+
+  double retTime = 0.1;
   int i;
   C0Set set(u_0, 1);
   IntervalMatrix mx(m, m);
@@ -500,7 +309,7 @@ void basicPOTest(int testNumber, int approach){
 //    std::cout << "step #" << i << " ";
     set.move(dynsys);
     log << (IntervalVector)set << "\n";
-    if(i * step > retTime){      
+    if(i * step > retTime){
       std::cout << "Return time passed, full revolution of the orbit\n";
       break;
     }
@@ -516,7 +325,7 @@ int main(int argc, char * argv[]){
 //  MpFloat::setDefaultPrecision(100);
   setLoggers();
   if(argc != 4){
-    std::cerr << "Number of arguments wrong.\nUsage: ./KSPOTest [projection|inclusion] test_number approach_number\n" << 
+    std::cerr << "Number of arguments wrong.\nUsage: ./CHTest [projection|inclusion] test_number approach_number\n" <<
                  "if \"projection\" is specified then the Galerkin projection is integrated, when \"inclusion\" is specified the " <<
                  "whole system is integrated (using the Lohner algorithm for inclusions)" <<
                  "\n test_number is the test index, which corresponds to the index provided in Figure 1.18 and 1.19," <<
@@ -528,13 +337,13 @@ int main(int argc, char * argv[]){
       if(strcmp(argv[1], "inclusion")==0){
         inclPOTest(atoi(argv[2]), atoi(argv[3]));
       }else{
-        std::cerr << "Number of arguments too small.\nUsage: ./KSPOTest [projection|inclusion] test_number approach_number\n" << 
+        std::cerr << "Number of arguments too small.\nUsage: ./CHTest [projection|inclusion] test_number approach_number\n" <<
                  "if \"projection\" is specified then the Galerkin projection is integrated, when \"inclusion\" is specified the " <<
                  "whole system is integrated (using the Lohner algorithm for inclusions)" <<
                  "\n test_number is the test index, which corresponds to the index provided in Figure 1.18 and 1.19," <<
                  "\napproach_number is the approach type, 0 - the direct approach, 1 - the FFT approach, 2 - the FFT approach, but the first normalized derivative is calculated directly, in order to avoid blow-ups.\n";
       }
-    }    
+    }
   }
   FOJ1D::destroy();
 }
