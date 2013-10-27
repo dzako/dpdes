@@ -492,9 +492,9 @@ void basicTest(int testNumber, int approach){
   }
   if(testNumber == 1){
     //the left panel from DBCP paper p. 3691
-    nu = 10.14;
+    nu = 8;
     STEPS = 100000;
-    n = 17;
+    n = 22;
     step = 0.00001;
 
     //n at least 17

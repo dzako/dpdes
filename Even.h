@@ -15,13 +15,16 @@
 namespace capd{
 namespace jaco{
 
-///Even, Even functions subspace indexed by IndexT.
-///this class is base for all classes that operate on the Fourier modes of
-///real functions with periodic bd. conditions (invariant subspace a_k=\overline{a_{-k}})
-///satisfying condition f(-x)=f(x).
-///Modes (Galerkin projection, near tail) are always stored in an array, and this class
-///provides methods to retrieve from this array indicated modes and vice versa.
-
+/*Even, Even functions subspace indexed by IndexT.
+ *this class is base for all classes that operate on the Fourier modes of
+ *real functions with periodic bd. conditions (invariant subspace a_k=\overline{a_{-k}})
+ *satisfying condition f(-x)=f(x).
+ *Modes (Galerkin projection, near tail) are always stored in an array, and this class
+ *provides methods to retrieve from this array indicated modes and vice versa.
+ *
+ *If the a_0 mode is constant the value of  a0IsConstant must be set to true,
+ *otherwise the full jet will be generated and value of a0 will be changing.
+ */
 template<class ScalarT, class IndexT, class NormT,
   class MatrixT = capd::vectalg::Matrix<ScalarT, 0, 0>,
   class IndexRangeT = capd::jaco::FourierConvolutionIndexRange<IndexT, NormT> >
@@ -39,9 +42,9 @@ public:
   using BaseClass::m;
   using BaseClass::M;
 
-  Even(int m_, int M_) : BaseClass(m_, M_){BaseClass::a0IsConstant = false;}
+  Even(int m_, int M_) : BaseClass(m_, M_){BaseClass::a0IsConstant = true;}
 
-  Even() : BaseClass(){BaseClass::a0IsConstant = false;}
+  Even() : BaseClass(){BaseClass::a0IsConstant = true;}
 
   ///One dimensional bound.
   inline typename capd::jaco::ComplexScalar<ScalarType> bound(const ScalarType& C, const ScalarType& s, const IndexType& k) const{
@@ -96,7 +99,7 @@ public:
     int i;
     for(i = 0; i<idx.d(); i++)
       idx[i] = m;
-    idx.l = idx.d()-1;
+    idx.l = idx.components()-1;
     return (idx.mode2array(m, 1, capd::jaco::withZero)) / 2 + 1;
   }
 
@@ -105,7 +108,7 @@ public:
     int i;
     for(i = 0; i<idx.d(); i++)
       idx[i] = m;
-    idx.l = idx.d()-1;
+    idx.l = idx.components()-1;
     return (idx.mode2array(m, 1, capd::jaco::withZero)) / 2 + 1;
   }
 

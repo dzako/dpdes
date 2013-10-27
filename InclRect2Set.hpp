@@ -37,7 +37,7 @@ namespace capd{
 
       VectorType Delta;
       diffIncl2.computeImageAndPerturbation(*this, result, Delta);
-      
+
       // Rearrangements
       VectorType x = midVector( result.m_x + Delta);
       VectorType dr = result.m_x + Delta - x;

@@ -22,6 +22,14 @@
 //  #define PI 3.1415926535897932384626433832795
 #endif
 
+// MOCK FUNCTIONS NEEDED FOR NONRIGOROUS INTEGRATOR TO WORK
+void setLeftBound( Interval& i, DOUBLE b){
+  i.setLeftBound(b);
+}
+void setRightBound( Interval& i, DOUBLE b){
+  i.setRightBound(b);
+}
+
 #include "capd/dynsys/BasicFadTaylor.h"
 #include "capd/dynsys/FadTaylor.h"
 

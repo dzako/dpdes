@@ -134,12 +134,14 @@ void DPDEInclRect2Set<MatrixType, TailT>::move(DiffIncl & diffIncl, int stepNumb
   VectorType W_2; ///[W_2]
   //f<<"Step number "<<stepNumber<<" in progress.\n";
   VectorType y_c, Deltha;
+
   {///steps 1-3, 5-8 of Algorithm 1
   Deltha = diffIncl.perturbations(x, T, N, W_2, y_c, f);
   }///end steps 1-3, 5-8 of Algorithm 1
 
   ///in T we have T([0,h])
   ///in N we have N([W_2], T[0, h])
+
 
   {///step  4 of Algorithm 1
   diffIncl.getDynamicalSystem().setYc(y_c); ///setting y_c of a unperturbed projection

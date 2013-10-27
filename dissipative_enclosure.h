@@ -366,9 +366,9 @@ typename EquationT::PolyBdType enclosure(EquationT & vField, typename EquationT:
   ScalarT small = ScalarT(-1, 1) * __SMALL__;
   ScalarT sm;
   //initial guess  
-  F(x, tpb, F.getFinitePart());
-  fx = tpb;  
-    
+  //F(x, tpb, F.getFinitePart());
+  //fx = tpb;
+
   enclosureDebug << "calculated F: " << tpb << "\n";
   
   for(i = 0; i < dimension; i++) {
@@ -384,9 +384,10 @@ typename EquationT::PolyBdType enclosure(EquationT & vField, typename EquationT:
   }
   double d_l, d_r;
   ScalarT fzn;
+
   while(!allValidated && s++ < steps) {
     enclosureDebug<<"step: "<<s<<"\n";
-    allValidated = true;    
+    allValidated = true;
     F.N(z, tpb, F.getFinitePart());
     Nz = tpb;
     F.L(z, tpb);
@@ -507,7 +508,6 @@ typename EquationT::PolyBdType enclosure(EquationT & vField, typename EquationT:
   enclosureDebug<<"calculated candidate for enclosure:\n";
   F.printModesIndex(y, n, enclosureDebug);
   PolyBdT Fy(x.n);
-
 
   //refinement steps
   for(j = 0; j < refinementSteps; j++) {    

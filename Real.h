@@ -19,12 +19,16 @@ namespace jaco{
 /**For Real vectors in which real and imaginary part are kept separately.
  */
 
-///this class is base for all classes that operate on the Fourier modes of one dimensional
-///real functions with periodic bd. conditions (invariant subspace a_k=\overline{a_{-k}}).
-///Modes (Galerkin projection, near tail) are always stored in an array, and this class
-///provides methods to retrieve from this array indicated modes and vice versa. Moreover it
-///assumes that arrays stores modes of positive index only, whereas those of neagative index
-///are retrieved by taking the conjugate of corresponding positive indexed mode.
+/*this class is base for all classes that operate on the Fourier modes of one dimensional
+ *real functions with periodic bd. conditions (invariant subspace a_k=\overline{a_{-k}}).
+ *Modes (Galerkin projection, near tail) are always stored in an array, and this class
+ *provides methods to retrieve from this array indicated modes and vice versa. Moreover it
+ *assumes that arrays stores modes of positive index only, whereas those of neagative index
+ *are retrieved by taking the conjugate of corresponding positive indexed mode.
+
+ *If the a_0 mode is constant the value of  a0IsConstant must be set to true,
+ *otherwise the full jet will be generated and value of a0 will be changing.
+ */
 template<class ScalarT, class IndexT, class NormT,
   class MatrixT = capd::vectalg::Matrix<ScalarT, 0, 0> ,
   class IndexRangeT = capd::jaco::FourierConvolutionIndexRange<IndexT, NormT> >

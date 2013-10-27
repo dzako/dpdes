@@ -68,8 +68,7 @@ public:
   ///in the m_W_2 field.
   void enclosureWithTail(ParamType& x_0){
     int j, i;    
-    int first = x_0.finiteTailBegin(),
-        last = x_0.finiteTailEnd();   
+
     ScalarType bk, g;
     ParamType bt, gt, T0h; ///TODO: at each step these objects are created, this is redundant
     bool validated = false;
@@ -105,6 +104,9 @@ public:
       m_W_2 = diffInclusionEnclosure(m_W_2);
       validated = m_diffIncl.validateT(step, x_0, m_W_2, validate, farTailValidate, guessedC, previousL, previousdL, changedLastStep, firstStep, recalculateN);
     }
+    std::cout << "validating steps nr=" << stepNr << "\n";
+//    ::TOTAL_ITER += stepNr;
+
 //    std::cout << "validating steps nr=" << stepNr << "\n";
 
     if(!validated) {
@@ -113,10 +115,16 @@ public:
       throw std::runtime_error("Failed to validate a tail, number of attempts exceeded threshold value.\n Probably the set has grown too large.\n For the usage refer the documentation, for the examples refer Section 7 in the paper.");
     }
 
+    int first = x_0.finiteTailBegin(),
+        last = x_0.finiteTailEnd();
     //  ONLY ONE REFINEMENT STEP!!! NEVER CHANGE IT!!!
+    // WHEN THIS STEP IS NOT PERFORMED T_0 \SUBSET W_2 MAY NOT BE SATISFIED
     for(j = 0; j < 1; j++) {
       tailDebug<<"refinement step: "<<j<<"\n"<<"calculated W_2=\n"<<m_W_2<<"\n";
-      m_diffIncl.N(m_W_2, m_N);
+
+      //values are copied from equation (was calculated in last validateT step
+      m_N = m_diffIncl.m_Nt;
+      //m_diffIncl.N(m_W_2, m_N);
       m_diffIncl.bt(m_N, bt);
       m_diffIncl.gt(step, x_0, m_N, gt);
       for(i = first; i <= last; ++i) {
@@ -142,22 +150,26 @@ public:
           tailDebug<<"T.left=g.left "<<g.leftBound()<<"\n";
         }
       }
-      tailDebug<<"chosen W_2:\n";
-      tailDebug << m_W_2;
     }
-    m_W_2.copyFinitePartFrom(x_0);
-    m_W_2 = diffInclusionEnclosure(m_W_2);
-    m_diffIncl.N(m_W_2, m_N);
+
+    tailDebug<<"chosen W_2:\n";
+    tailDebug << m_W_2;
+
+    ///saving calculated T
     ///saving calculated T
     ///take intersection of the far tail of T with the far tail of T0
     if(!x_0.subsetFar(m_W_2)) {
-      setCLarger(m_W_2, C(x_0) * power(m_diffIncl.M, s(m_W_2) - s(x_0)));
+      setCLarger(m_W_2, C(x_0) * power(m_W_2.M, s(m_W_2) - s(x_0)));
     }
 
     ///CHECKS IF IN FACT VALIDATED TAIL IS OK, in the sense satisfies T([0,h])\subset T
   #if __VERIFY_TAIL__
+    m_W_2.copyFinitePartFrom(x_0);
+    m_W_2 = diffInclusionEnclosure(m_W_2);
+    m_diffIncl.N(m_W_2, m_N);
+
     if(!x_0.subset(m_W_2)) {
-      tailDebug<<"!x_0.subset(W_2)\n";
+      tailDebug<<"!x_0.subset(W_2)\n" << x_0 << "\n" << m_W_2 << "\n";
       std::cerr<<"!x_0.subset(W_2)\n";
       throw std::runtime_error("!x_0.subset(W_2)\n");
     }
@@ -320,7 +332,6 @@ public:
     }
   #endif
 
-    ///this->T0 = T0;///???
   }
 
 
@@ -357,6 +368,7 @@ public:
   ///-W_2, the enclosure [W_2] in the step 1 of Algorithm 1,
   ///-y_c, y_c in the step 3 of Algorithm 1.
   VectorType perturbations(const VectorType & x, ParamType & x_0){
+//    COUNT_OPERATIONS = true;
     copyFinitePart(x, x_0);
     generalDebug << "current x_0:\n" << x_0;
 //    clock_t start, end;
@@ -365,10 +377,12 @@ public:
 //    start = clock();
     ///in blocks {} we collect all the steps of Algorithm 1, with reference to corresponding step number
     getDynamicalSystem().eraseYc();
-    
+
+
     {///step 1
       enclosureWithTail(x_0); ///returns enclosures [W_2], T: T([0,h])\subset T, N: N_k(x+T)
     }///end of step 1
+
     generalDebug<<"current T:\n"; generalDebug << m_W_2;
 //    end = clock();
 //    std::cout << "enclosureWithTail time: " << end-start << "\n";
@@ -377,6 +391,7 @@ public:
     {///step 2
       m_diffIncl.perturbations(m_W_2, galerkinProjectionError);
     }///end of step 2
+
     generalDebug << "found perturbations:\n"; m_diffIncl.printModes(galerkinProjectionError, generalDebug);
 
     {///step 3
@@ -396,6 +411,8 @@ public:
 
     inclDebug << "found C:\n" << C << "\n";
     printVector(C, inclDebug);
+
+ //   COUNT_OPERATIONS = true;
 
     int i, j;
     MatrixType J;
@@ -424,8 +441,10 @@ public:
         AnNorm = right((*m_norm)(A));
     ScalarType n = 2.0;  // n = i + 2
     // remainder = |A| * |At/(N+2)| / (1 - |At/(N+2)|)   (the sum of geometric series from N to infinity)
-    ScalarType q = AtNorm/n;    
+    ScalarType q = AtNorm/n;
+    int Aiterations = 0;
     while(true){
+      Aiterations ++;
       A = A * At / n;
       Sum += A;
       AnNorm *= q;
@@ -438,6 +457,7 @@ public:
           break;
       }
     }
+    std::cout << "Aiterations=" << Aiterations << "\n";
     // we recompute remainder because norm of A can be smaller than approximation : AnNorm
     ScalarType remainder = right((*m_norm)(A) * AtNorm / (n  - AtNorm ));    
     for(i=0; i < J.numberOfRows(); ++i)
@@ -449,9 +469,12 @@ public:
       result[i] = ScalarType(-D[i].rightBound(), D[i].rightBound());
 
     }///end of step 8
+    //COUNT_OPERATIONS = false;
+
     generalDebug<<"found Deltha:\n";
     inclDebug << "found Deltha:\n" << result << "\n";
     m_diffIncl.printModes(result, generalDebug);
+//    COUNT_OPERATIONS = false;
     return result;
   }
 
@@ -468,11 +491,7 @@ public:
   void moveParams(const VectorType& x, ParamType & x_0){
     ScalarType step = getStep();    
     m_diffIncl.gt(step, x_0, m_N, m_g);
-#if __SM__
-    if(s(x_0) != s(gt)){
-      generalDebug<<"s was updated, current s: "<<s(gt)<<"\n";
-    }
-#endif
+
     copyFinitePart(x, m_g);//here we copy the projection part to m_g object, which stores the current set
     x_0 = m_g;    
   }

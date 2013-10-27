@@ -15,12 +15,17 @@
 namespace capd{
 namespace jaco{
 
-///Real, odd functions subspace indexed by IndexT.
-///this class is base for all classes that operate on the Fourier modes of
-///real functions with periodic bd. conditions (invariant subspace a_k=\overline{a_{-k}})
-///satisfying oddness condition f(-x)=-f(x).
-///Modes (Galerkin projection, near tail) are always stored in an array, and this class
-///provides methods to retrieve from this array indicated modes and vice versa.
+/*Real, odd functions subspace indexed by IndexT.
+ *this class is base for all classes that operate on the Fourier modes of
+ *real functions with periodic bd. conditions (invariant subspace a_k=\overline{a_{-k}})
+ *satisfying oddness condition f(-x)=-f(x).
+ *Modes (Galerkin projection, near tail) are always stored in an array, and this class
+ *provides methods to retrieve from this array indicated modes and vice versa.
+ *
+ *If the a_0 mode is constant the value of  a0IsConstant must be set to true,
+ *otherwise the full jet will be generated and value of a0 will be changing.
+ */
+
 template<class ScalarT, class IndexT, class NormT,  
   class MatrixT = capd::vectalg::Matrix<ScalarT, 0, 0>, 
   class IndexRangeT = capd::jaco::FourierConvolutionIndexRange<IndexT, NormT> >

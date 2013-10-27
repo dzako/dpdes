@@ -76,7 +76,8 @@ public:
 
 
     RealPolynomialBound(int n_) : ContainerType(modes2arraySizeStatic(n_)), SubspaceType(n_,
-                                  n_), n(n_), d(modes2arraySizeStatic(n_)), N(n_), D(modes2arraySizeStatic(n_)), w(1),
+                                  n_), n(n_), d(modes2arraySizeStatic(n_)), N(n_), D(modes2arraySizeStatic(n_)), w(0),
+                                  //w should be 0 here , because the size of the container, and indices should be calculated for N ( equation is (w+1)*N )
                                   farTail(n, n), realContainer(modes2realArraySizeStatic(n_)),
                                   useAbsValues(false){
       infiniteDimensional = false;
@@ -93,17 +94,14 @@ public:
                                           useAbsValues(false){
       infiniteDimensional = true;
       irProjection.setRange(0, capd::jaco::weak, n, capd::jaco::weak);
-      irFiniteTail.setRange(n, capd::jaco::strong, N, capd::jaco::weak);
-      irProjectionPlusFiniteTail.setRange(0, capd::jaco::weak, N, capd::jaco::weak);
-      irRedundantRange.setRange(N, capd::jaco::strong, (w+1) * N, capd::jaco::weak);
-      irFull.setRange(0, capd::jaco::weak, (w+1) * N, capd::jaco::weak);
+      resetRanges();
     }
     
     /**
      * @param container this DPDEContainer defines the type of function that is stored in the bound (odd, even or none) 
      * @return
      */
-    RealPolynomialBound(int n_, int N_, const DPDEContainerType& container, int w_ = 2) :
+    RealPolynomialBound(int n_, int N_, const DPDEContainerType& container, int w_ = 1) :
                                                        ContainerType(modes2arraySizeStatic((w_+1) * N_)), SubspaceType(modes2arraySizeStatic(n_),
                                                        modes2arraySizeStatic(N_)), DPDEContainerType(container),
                                                        n(n_), d(modes2arraySizeStatic(n_)), N(N_), D(modes2arraySizeStatic(N_)), w(w_),
@@ -111,14 +109,18 @@ public:
                                                        useAbsValues(false){
       infiniteDimensional = true;
       irProjection.setRange(0, capd::jaco::weak, n, capd::jaco::weak);
-      irFiniteTail.setRange(n, capd::jaco::strong, N, capd::jaco::weak);
-      irProjectionPlusFiniteTail.setRange(0, capd::jaco::weak, N, capd::jaco::weak);
-      irRedundantRange.setRange(N, capd::jaco::strong, (w+1) * N, capd::jaco::weak);
-      irFull.setRange(0, capd::jaco::weak, (w+1) * N, capd::jaco::weak);
+      resetRanges();
     }
 
     RealPolynomialBound(const RealPolynomialBound& pb){
       *this = pb;
+    }
+
+    void resetRanges(){
+      irFiniteTail.setRange(n, capd::jaco::strong, N, capd::jaco::weak);
+      irProjectionPlusFiniteTail.setRange(0, capd::jaco::weak, N, capd::jaco::weak);
+      irRedundantRange.setRange(N, capd::jaco::strong, (w+1) * N, capd::jaco::weak);
+      irFull.setRange(0, capd::jaco::weak, (w+1) * N, capd::jaco::weak);
     }
 
 
@@ -133,9 +135,21 @@ public:
       return r;
     }
 
+    /**Calculates the maximum over norms of the modes within this container.
+     */
+    inline RealType maxOfNorms() const{
+      RealType r(0);
+      IndexType index;
+      for(index = firstModeIndex(irProjectionPlusFiniteTail); !index.limitReached(irProjectionPlusFiniteTail); index.inc(irProjectionPlusFiniteTail)){
+        if(r < RealPolynomialBound::operator[](index).normMax())
+          r = RealPolynomialBound::operator[](index).normMax();
+      }
+      return r;
+    }
+
     ///wrapper function returns index in the array of modes from the lower subspace
     inline int mode2array(const IndexType& k, int dim_ = 0) const{
-      int dim = (dim_ == 0 ? (w+1) * N : dim_); //the factor here must be (w+1), because the redundant range dimension is (w+1)*N
+      int dim = (dim_ == 0 ? (w+1) * N : dim_); //the factor here must be (w+1), because the redundant range dimension is (w+1)*N      m
       bool re=false;
       if(k.upperHalfspace())
         return k.mode2array(dim, re) / 2;
@@ -425,9 +439,10 @@ public:
     friend std::ostream& operator<<(std::ostream& out, const RealPolynomialBound& pb){
       IndexType index;
       out << "RealPolynomialBound\n" << (DPDEContainer&)pb << "\n";
+      out << pb.dimension() << "\n";
       if(!pb.infiniteDimensional){
         for(index = pb.firstModeIndex(pb.irProjection); !index.limitReached(pb.irProjection); index.inc(pb.irProjection)){
-          out << index << ": " << pb[index] << "\n";
+          out << index << "(" << pb.mode2array(index) << ": " << pb[index] << "\n";
         }
       }else{
         //printing out the whole redundant range
@@ -523,6 +538,69 @@ public:
       IndexType index;
       for(index = firstModeIndex(irProjectionPlusFiniteTail); !index.limitReached(irProjectionPlusFiniteTail); index.inc(irProjectionPlusFiniteTail)){
         abs[index] = (*this)[index].abs_supremum();
+      }
+    }
+
+
+    inline int changeM(int newM, bool guard = false){
+      IndexType index;
+      if(index.d() == 1){
+        std::cout << "HERE, M=" << this->M <<", newM=" << newM << "\n";
+        if(this->M > newM) { /// new dimension is smaller than current dimension
+          ScalarType norm, ntp, max = 0;
+          int i;
+          for(i = this->M; i >= newM + 1; --i) {
+            norm = (*this)[IndexType(i)].norm();
+            ntp = norm * power(ScalarType(i), farTail.m_s);
+            if(guard) {
+              if(!(ntp <= max)){
+                if(max < 2 * farTail.m_c)
+                  max = ntp;
+                else {
+                  i = i + 1;
+                  break;
+                }
+              }
+            } else {
+              if(!(ntp <= max))
+                max = ntp;
+            }
+          }
+
+          newM = i;
+          if(newM <= this->M) {
+            //we have to estimate rest by newC/k^s
+            ContainerType tmp( *this );
+            this->resize( modes2arraySizeStatic( (w+1) * newM ) );
+            for(int i = 0; i < ((ContainerType)(*this)).dimension(); i++)
+              ((ContainerType&)(*this))[i] = tmp[i];
+            farTail.setC(max);
+            farTail.setM(newM);
+            N = newM;
+            this->M = newM;
+            resetRanges();
+          }
+          return newM;
+        }
+        if(this->M < newM) { /// new dimension is larger than current dimension
+          ContainerType tmp( *this );
+          this->resize( modes2arraySizeStatic( (w+1) * newM) );
+          for(int i = 0; i < tmp.dimension(); i++)
+            ((ContainerType&)(*this))[i] = tmp[i];
+          int oldM = N;
+          N = newM;
+          this->M = newM;
+          resetRanges();
+          int i;
+          for(i = oldM + 1; i <= newM; ++i) {
+            (*this)[  IndexType(i) ] = farTail[ IndexType(i) ];
+          }
+          farTail.setM(newM);
+        }
+        return newM;
+      }else{
+        std::cerr << "PolyBd.changeM not implemented for dimensions higher than 1.\n";
+        throw std::runtime_error("PolyBd.changeM not implemented for dimensions higher than 1.\n");
       }
     }
 

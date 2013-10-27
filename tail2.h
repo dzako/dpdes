@@ -55,7 +55,10 @@ public:
 
   inline ScalarType value(int i) const {
     double j = (i > 0 ? i : -i);
-    return (m_c / power(ScalarType(j), m_s)) * ScalarType(-1, 1);
+    ScalarType unit;
+    setLeftBound(unit, -1.);
+    setRightBound(unit, 1.);
+    return (m_c / power(ScalarType(j), m_s)) * unit;
   }
 
   ///Returns a value that is at index i in the internal data storage, used for iterating.
@@ -74,11 +77,15 @@ public:
 //  }
 
   inline ComplexScalarType operator[](const IndexType& index) const{
-    ScalarType s;
+    ScalarType s,
+               unit;
+    setLeftBound(unit, -1.);
+    setRightBound(unit, 1.);
+
     if(index.d() == 1)
-      s = (m_c / power(ScalarType((index[0] > 0 ? index[0] : -index[0])), m_s)) * ScalarType(-1, 1);
+      s = (m_c / power(ScalarType((index[0] > 0 ? index[0] : -index[0])), m_s)) * unit;
     else
-      s = (m_c / power(ScalarType(index.squareEuclNorm()), m_s/2.)) * ScalarType(-1, 1);
+      s = (m_c / power(ScalarType(index.squareEuclNorm()), m_s/2.)) * unit;
     return farTailMode(s);
   }
 

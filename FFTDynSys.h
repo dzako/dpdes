@@ -39,7 +39,7 @@ public:
   typedef typename EquationTaylorType::ScalarType ScalarType; ///<this is interval, this typename is used for enclosure function purpose
   typedef typename EquationTaylorType::ScalarT ScalarT; ///<this is the actual scalartype (jet or complex number)
   typedef typename EquationTaylorType::ComplexScalarType ComplexScalarType;
-  typedef typename ComplexScalarType::ScalarType IntervalType;
+  typedef typename ComplexScalarType::ScalarType RealType;
   typedef typename FFTType::IndexRangeType IndexRangeType;
   typedef typename FFTType::ModesContainerType ModesContainerType;
   typedef typename ModesContainerType::DPDEContainerType DPDEContainerType;
@@ -48,9 +48,10 @@ public:
 
   int m;
   int dftPts;
-  IntervalType step;
+  RealType step;
   int order;
   int algorithmType;
+  bool changeStepAdaptively;
 
   ModesContainerType rhsSeries;///< temporary variable
   DFTGridType rhsFunctionSpace;
@@ -61,9 +62,9 @@ public:
 
   /**IMPORTANT: This constructor is used to create a FINITE dimensional integrator (only projection is taken into account)   
    */
-  FFTBasicDynSys(int m_, int dftPts_, IntervalType step_, int order_, IntervalType pi_, IntervalType nu_) :
+  FFTBasicDynSys(int m_, int dftPts_, RealType step_, int order_, RealType pi_, RealType nu_) :
   EquationTaylorType(m_, dftPts_, nu_, pi_, order_), m(m_), dftPts(dftPts_), step(step_), order(order_), rhsSeries(m),
-  rhsFunctionSpace(dftPts_), td(m), tl(m), modes(order_+1, false), grids(order_+1, false){
+  rhsFunctionSpace(dftPts_), td(m), tl(m), modes(order_+1, false), grids(order_+1, false), changeStepAdaptively(false){
     int i;
     for(i=0; i <= order; ++i){
       modes[i] = ModesContainerType(m);
@@ -73,14 +74,19 @@ public:
   
   /**IMPORTANT: This constructor is used to create a INFINITE dimensional integrator (only projection is taken into account)   
    */
-  FFTBasicDynSys(int m_, int dftPts_, int M_, int dftPts2_, IntervalType step_, int order_, IntervalType pi_, IntervalType nu_, bool initializeHigherDFT = true) :
+  FFTBasicDynSys(int m_, int dftPts_, int M_, int dftPts2_, RealType step_, int order_, RealType pi_, RealType nu_, bool initializeHigherDFT = true) :
   EquationTaylorType(m_, M_, dftPts_, dftPts2_, nu_, pi_, order, initializeHigherDFT), m(m_), dftPts(dftPts_), step(step_), order(order_), rhsSeries(m),
-  rhsFunctionSpace(dftPts_), td(m), tl(m), modes(order_+1, false), grids(order_+1, false){
+  rhsFunctionSpace(dftPts_), td(m), tl(m), modes(order_+1, false), grids(order_+1, false), changeStepAdaptively(false){
     int i;
     for(i=0; i <= order; ++i){
       modes[i] = ModesContainerType(m);
       grids[i] = DFTGridType(dftPts_);
     }
+  }
+
+  void setStep(RealType newStep){
+    step = newStep;
+    changeStepAdaptively = false;
   }
 
   inline void setInitialCondition(const ModesContainerType& ic) {
@@ -107,7 +113,7 @@ public:
   inline void remainder(VectorType& r){
     modes[order].projectOntoSubspace();
     r = modes[order];
-    IntervalType fac = power(step, order);
+    RealType fac = power(step, order);
     r *= fac;
   }
 
@@ -119,6 +125,19 @@ public:
     current(out);
   }
 
+  RealType computeNextTimeStep(){
+    RealType epsilon = power(10, -TypeTraits<RealType>::numberOfDigits()-2),
+             minStep = 1. / 1048576.,
+             maxStep = 0.1,
+             optStep = maxStep;
+
+    double coeffNorm = toDouble( rightBound(modes[order].maxOfNorms()) );
+    capd::rounding::DoubleRounding::roundNearest();
+    RealType Cstep = exp(log(epsilon / coeffNorm) / (order));
+    Cstep = capd::max(Cstep, minStep);
+
+    return capd::min(maxStep, Cstep);
+  }
 
   /**Direct FFT method.
    */
@@ -132,13 +151,17 @@ public:
     for(i=0; i < order; ++i){       
       rightHandSide( i, grids, modes, rhsSeries, rhsFunctionSpace, (i < order - 1 ? true : false));      
       //this is not needed, because we divide rhsSeries inside rhs function, and then transform to rhsFunctionSpace
-      //rhsSeries *= IntervalType(1) / IntervalType(i+1);
-      //rhsFunctionSpace *= IntervalType(1) / IntervalType(i+1);
+      //rhsSeries *= RealType(1) / RealType(i+1);
+      //rhsFunctionSpace *= RealType(1) / RealType(i+1);
       modes[i+1] = rhsSeries;
       generalDebug2 << "modes["<<i+1<<"] ("<<modes[i+1].subspaceType<<", "<<modes[i+1].solutionType<<")="<<modes[i+1]<<"\n";
       grids[i+1] = rhsFunctionSpace;
       generalDebug2 << "grid["<<i+1<<"] ("<<grids[i+1].subspaceType<<", "<<grids[i+1].solutionType<<")="<<grids[i+1]<<"\n";
     }    
+    if( changeStepAdaptively ){
+      step = computeNextTimeStep();
+      //std::cout << "current step=" << step << "\n";
+    }
     evaluatePolynomials(); ///<evaluates polynomials and calculates new modes[0]    
   }
 
@@ -163,6 +186,10 @@ public:
       grids[i+1] = rhsFunctionSpace;
       generalDebug2 << "grid["<<i+1<<"] ("<<grids[i+1].subspaceType<<", "<<grids[i+1].solutionType<<")="<<grids[i+1]<<"\n";
     }
+    if( changeStepAdaptively ){
+      step = computeNextTimeStep();
+      //std::cout << "current step=" << step << "\n";
+    }
     evaluatePolynomials(); ///<evaluates polynomials and calculates new modes[0]
   }
 
@@ -176,9 +203,13 @@ public:
       rightHandSide(i, modes, rhsSeries);
       ScalarT::switchToGlobalOptimization();
       //this is not needed, because we divide rhsSeries inside rhs function
-      //rhsSeries *= IntervalType(1) / IntervalType(i+1);
+      //rhsSeries *= RealType(1) / RealType(i+1);
       modes[i+1] = rhsSeries;
       generalDebug2 << "modes["<<i+1<<"] ("<<modes[i+1].subspaceType<<", "<<modes[i+1].solutionType<<")="<<modes[i+1]<<"\n";
+    }
+    if( changeStepAdaptively ){
+      step = computeNextTimeStep();
+      //std::cout << "current step=" << step << "\n";
     }
     evaluatePolynomials();
   }
@@ -232,7 +263,7 @@ public:
   typedef capd::dynsys::DynSys<typename TaylorT::MatrixType > DynSysType;
   typedef typename DynSysType::VectorType DynSysVectorType;
   typedef typename TaylorType::FFTType FFTType;
-  typedef typename FFTType::IntervalType IntervalType;
+  typedef typename TaylorType::RealType RealType;
   typedef typename FFTType::IndexRangeType IndexRangeType;
   typedef typename FFTType::IndexType IndexType;
 
@@ -257,7 +288,7 @@ public:
   
   /**IMPORTANT: This constructor is used to create a finite dimensional integrator (only projection is taken into account)   
    */
-  FFTTaylorDynSys(int m_, int dftPts_, IntervalType step_, int order_, IntervalType pi_, IntervalType nu_) :
+  FFTTaylorDynSys(int m_, int dftPts_, RealType step_, int order_, RealType pi_, RealType nu_) :
     basicDynSys(m_, dftPts_, step_, order_ + 1, pi_, nu_), jetDynSys(m_, dftPts_, step_, order_, pi_, nu_), x(m_), xx(m_),
     forcing(PolyBdType::modes2realArraySizeStatic(m_)), yc(PolyBdType::modes2realArraySizeStatic(m_)){
     jetDynSys.algorithmType = direct;
@@ -266,7 +297,7 @@ public:
   
   /**IMPORTANT: This constructor is for the differential inclusion. The infinite part is taken into account (that's why M and dftPts2 are needed)
    */
-  FFTTaylorDynSys(int m_, int dftPts_, int M_, int dftPts2_, IntervalType step_, int order_, IntervalType pi_, IntervalType nu_) : 
+  FFTTaylorDynSys(int m_, int dftPts_, int M_, int dftPts2_, RealType step_, int order_, RealType pi_, RealType nu_) :
     basicDynSys(m_, dftPts_, M_, dftPts2_, step_, order_ + 1, pi_, nu_, true), jetDynSys(m_, dftPts_, step_, order_, pi_, nu_), x(m_), 
     xx(m_), forcing(PolyBdType::modes2realArraySizeStatic(m_)), yc(PolyBdType::modes2realArraySizeStatic(m_)){
     jetDynSys.algorithmType = direct;
@@ -379,7 +410,7 @@ public:
     return jetDynSys;
   }
 
-  inline const IntervalType& getStep() const{
+  inline const RealType& getStep() const{
     return jetDynSys.step;
   }
 

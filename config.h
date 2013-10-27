@@ -15,16 +15,17 @@
 
 #define __FILIB__ 0 //whether to use the filib library for interval arithmetic
 
-#define __CONSTANT_M__ 1 //decides whether M is constant or is changing throughout integration
+#define __CONSTANT_M__ 0 //decides whether M is constant or is changing throughout integration
 
+#define __INFLATE_RADIUS__ 2
 
 #define __SMALL__ 1e-25 ///used in rough enclosure algorithm, small value used to increase in diameter set at the begining
 
-#define __REFINEMENT_STEPS__ 1 ///perform how many steps to refine enclosure and tail AT LEAST ONE STEP
+#define __REFINEMENT_STEPS__ 0 ///perform how many steps to refine enclosure and tail AT LEAST ONE STEP
 
 #define __MAX_VALIDATE_STEPS__ 1000 ///maximal number of steps possible when validating T
 
-#define __COUNT_OPERATIONS__ 1 ///if elementary operations should be counted
+#define __COUNT_OPERATIONS__ 0 ///if elementary operations should be counted
 
 long long unsigned int RRmultiplicationsSum;
 long long unsigned int RRadditionsSum;
@@ -71,18 +72,20 @@ extern inline void setLoggers(){
 }
 
 ///verification flags
-#define __VERIFY_ENCLOSURE__ 1 //whether to check if validated rough-enclosure satisfies theorem assumptions (is in fact enclosure)
+#define __VERIFY_ENCLOSURE__ 0 //whether to check if validated rough-enclosure satisfies theorem assumptions (is in fact enclosure)
                                //slower calculations, but with guaranteed enclosures.
 #define __VERIFY_TAIL__ 1 //whether to check if validated tail satisfies theorem assumptions (is in fact enclosure and T([0,h])\subset T),
                           //slower calculations, but with guaranteed tail enclosures.
 
 
-///tail validation flags
+///CHANGE M FLAGS
+///SHOULD BE ADJUSTED FOR EACH EQUATION SEPARATELY
+///ADJUSTED FOR DBCP (1.05)
+///FOR KS IS BETTER TO PUT (1.02)
 #define __DECREASE_L__ 1.02 ///used in the automatic choice of M procedure
-
 #define __INCREASE_L__ 1.02 ///used in the automatic choice of M procedure
-
-#define __L_THRESHOLD__ 1.05 ///used in the automatic choice of M procedure
+#define __L_THRESHOLD__ 1.02 ///used in the automatic choice of M procedure
+///END CHANGE M FLAGS
 
 ///the tail validation constants
 #define __D_G__ 0.1

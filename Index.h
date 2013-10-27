@@ -119,6 +119,10 @@ public:
     k_1orKmk_1=true;
   }
 
+  void doubleK_1Range(){
+    k_1NormRight *= 2;
+  }
+
   int moduloM1Index() const{
     return k_1NormRight;
   }

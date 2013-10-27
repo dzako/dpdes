@@ -154,10 +154,10 @@ public:
   friend void print(std::ostream& out, const DFT1DGrid& c, int top){
     int i;
     for(i=0; i < c.m; ++i){
-      out << i*2*3.14159265358979323846264338/double(c.m) << " " << c[i].secondFreeCoeff().re.leftBound() << "\n";
+      out << i*2*3.14159265358979323846264338/double(c.m) << " " << leftBound( c[i].secondFreeCoeff().re ) << "\n";
     }
     for(i=0; i < c.m; ++i){
-      out << i*2*3.14159265358979323846264338/double(c.m) << " " << c[i].secondFreeCoeff().re.rightBound() << "\n";
+      out << i*2*3.14159265358979323846264338/double(c.m) << " " << rightBound( c[i].secondFreeCoeff().re ) << "\n";
     }
     out << "\n";
     return out;
@@ -173,10 +173,10 @@ public:
     ///Gnuplot verseion, draws a ``wide strip'' representing the function values therefore fist the lower bound is printed, and then 
     ///the higher bound.
     for(i=0; i < c.m; ++i){
-      out << i*2*3.14159265358979323846264338/double(c.m) << " " << c[i].secondFreeCoeff().re.leftBound() << "\n";
+      out << i*2*3.14159265358979323846264338/double(c.m) << " " << leftBound( c[i].secondFreeCoeff().re ) << "\n";
     }
     for(i=c.m-1; i >= 0; --i){
-      out << i*2*3.14159265358979323846264338/double(c.m) << " " << c[i].secondFreeCoeff().re.rightBound() << "\n";
+      out << i*2*3.14159265358979323846264338/double(c.m) << " " << rightBound( c[i].secondFreeCoeff().re ) << "\n";
     }
     out << "\n";
     return out;
@@ -285,6 +285,22 @@ public:
     return *this;
   }
   
+  inline DFT2DGrid& multiplyOnly(const DFT2DGrid& dft1, const DFT2DGrid& dft2){
+    DPDEContainer::multiply(dft1, dft2);
+    int i,j;
+    for(i=0; i < m; ++i)
+      for(j=0; j < m; ++j){
+        grid[i][j] = dft1[i][j] * dft2[i][j];
+      }
+    return *this;
+  }
+
+  inline DFT2DGrid& multiply(const DFT2DGrid& dft1, const DFT2DGrid& dft2, const DFT2DGrid& dft3){
+    (*this).multiply(dft1, dft2);
+    (*this).multiplyOnly(*this, dft3);
+    return *this;
+  }
+
   inline void projectOntoSubspace(){
     int i, j;
     if(solutionType == capd::jaco::realValued){

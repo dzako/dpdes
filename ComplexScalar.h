@@ -161,6 +161,11 @@ public:
     im = -c.im;
   }
 
+  ///returns a bound for the complex number norm
+  inline ScalarType norm() const{
+    return sqrt( ScalarType(2.) ) * this->normMax();
+  }
+
   inline ScalarType normMax() const{
     ScalarType max = rightBound(capd::abs(re)), t;
     if((t = rightBound(capd::abs(im))) > max) max = t;
@@ -293,6 +298,7 @@ inline const ComplexScalar<ScalarT> operator*(const ScalarT& d, const ComplexSca
   return r;
 }
 
+//DEDICATED FOR INTERVAL OPTIMIZATIONS , FOR NONRIGOROUS CALCULATIONS SHOULD BE TURNED OFF
 template<typename ScalarT>
 inline const ComplexScalar<ScalarT> operator*(double d, const ComplexScalar<ScalarT>& ci){
   ComplexScalar<ScalarT> r;

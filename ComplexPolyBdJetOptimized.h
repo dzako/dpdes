@@ -84,6 +84,11 @@ public:
     return 0;
   }
 
+  ///dummy function
+  inline IntervalType maxOfNorms() const{
+    return 0;
+  }
+
   ///wrapper function returns index in the array of modes from the lower subspace
   inline int mode2array(const IndexType& k) const{
     bool re=false;
