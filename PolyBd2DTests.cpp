@@ -21,6 +21,13 @@
   typedef capd::intervals::Interval<DOUBLE> Interval;
 #endif
 
+// MOCK FUNCTIONS NEEDED FOR NONRIGOROUS INTEGRATOR TO WORK
+void setLeftBound( Interval& i, DOUBLE b){
+  i.setLeftBound(b);
+}
+void setRightBound( Interval& i, DOUBLE b){
+  i.setRightBound(b);
+}
 
 #include "ComplexScalar.h"
 #include "FirstOrderJet.h"
@@ -45,7 +52,7 @@ typedef capd::jaco::RealPolynomialBound<ComplexScalar, Index, 0> RealPolynomialB
 typedef capd::jaco::Burgers<RealPolynomialBound> Burgers;
 
 //typedef capd::jaco::FFT2DOneComponent<ComplexScalar, ComplexScalar, MaximumNorm, 0, 0, RealPolynomialBound> FFT2D;
-typedef capd::jaco::FFT2DOneComponent<ComplexScalar, ComplexScalar, MaximumNorm, 0, 0, RealPolynomialBound> FFT2D;
+typedef capd::jaco::FFT2DOneComponent<ComplexScalar, ComplexScalar, 0, 0, RealPolynomialBound> FFT2D;
 
 typedef capd::jaco::DPDE2<Burgers, FFT2D, 0> DPDE2;
 

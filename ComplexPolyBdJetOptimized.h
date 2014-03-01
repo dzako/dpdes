@@ -249,7 +249,8 @@ public:
     QuadMatrixType p;
     for(i=0; i < d; ++i)
       for(j=0; j < d; ++j){
-        if(i == j && j == 0 && a0IsConstant){
+        if(a0IsConstant && array2modeIndex(i).isZero() && array2modeIndex(j).isZero() && array2modeIndex(i).l == array2modeIndex(j).l){
+        //if(i == j && j == 0 && a0IsConstant){
           p[0][0] = 1; p[0][1] = 0; p[1][0] = 0; p[1][1] = 1;
         }else
           p = m_upperHalfspace[i].variationalPart(j);
@@ -301,7 +302,7 @@ public:
   //TODO: IMPORTANT - this is exactly what the C++ predefined operator is doing
   //check if the C++ predefined operator is calling (DPDEContainer&)*this = (DPDEContainer&)hmc; 
   //and (SubspaceType&)*this = (SubspaceType&)hmc; 
-  inline ComplexPolyBdJetOptimized& operator=(const ComplexPolyBdJetOptimized& hmc){
+  /*inline ComplexPolyBdJetOptimized& operator=(const ComplexPolyBdJetOptimized& hmc){
     (DPDEContainer&)*this = (DPDEContainer&)hmc;
     (SubspaceType&)*this = (SubspaceType&)hmc;
     n = hmc.n;
@@ -316,7 +317,7 @@ public:
     m_upperHalfspace = hmc.m_upperHalfspace;
     m_lowerHalfspace = hmc.m_lowerHalfspace;
     return *this;
-  }
+  }*/
 
   /**Sets a mode, determined by index, and its conjugate to the new value.
    *
@@ -575,6 +576,7 @@ public:
 
   using SubspaceType::a0IsConstant;
   using SubspaceType::mode2array;
+  using SubspaceType::array2modeIndex;
   using SubspaceType::firstModeIndex;
   using SubspaceType::modes2realArraySizeStatic;
   using SubspaceType::modes2arraySizeStatic;

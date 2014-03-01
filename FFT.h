@@ -886,7 +886,7 @@ public:
 /*
  * 17.04.2013 tested to work good
  */
-template< class ScalarT, class ComplexScalarT, class NormT, int N, int M,
+template< class ScalarT, class ComplexScalarT, int N, int M,
   class ModesContainerT = capd::jaco::ComplexPolyBdJetOptimized<typename ComplexScalarT::ScalarType, ScalarT, capd::jaco::Index2D, 2*2*2*N*N> >
 class FFT2DOneComponent : public ModesContainerT::SubspaceType{
 public:
@@ -932,12 +932,6 @@ public:
       modesContainerOfGrid[Index1DType(i)] = DFT1DGridType(m);      
     }
     
-  }
-
-  /**Returns dimension of a two dimensional modes container.
-   */
-  static int modesContainerDim(int n){
-    return 2*2*n*n;
   }
 
   /**Takes 1D projection of 2D discrete set of modes, and returns 1D ModesContainer.
@@ -1078,6 +1072,9 @@ public:
 };
 
 
+
+
+
 /**Calculates 2D FFT for M which is a power of two. This is a variant dedicated for use in the Taylor integrators, it
  * uses specific data representation. First template parameter (ScalarT) is a type that is transformed (complex number,
  * Taylor coefficients), second template parameter (ComplexScalarT) is a class representing a complex number (needed in
@@ -1088,8 +1085,8 @@ public:
  * 
  * TODO: 23.05.12 stack dimensions and capd::Matrix dimensions should be provided accordingly
  */
-template< class ScalarT, class ComplexScalarT, class NormT, int N, int M,
-  class ModesContainerT = capd::jaco::ComplexPolyBdJetOptimized<typename ComplexScalarT::ScalarType, ScalarT, capd::jaco::Index2D, 2*2*2*N*N> >
+template< class ScalarT, class ComplexScalarT, int N, int M,
+  class ModesContainerT = capd::jaco::ComplexPolyBdJetOptimized<typename ComplexScalarT::ScalarType, ScalarT, capd::jaco::Index2DTwoComponents, 2*2*2*N*N> >
 class FFT2D : public ModesContainerT::SubspaceType{
 public:
   typedef ScalarT ScalarType;
@@ -1104,7 +1101,7 @@ public:
   typedef capd::jaco::ComponentGrid<DFT2DGridType, 2> DFT2DComponentGridType;
   typedef DFT2DComponentGridType DFTGridType;
   typedef typename DFT2DGridType::DFT1DGridType DFT1DGridType;
-  typedef capd::jaco::Index2D Index2DType;
+  typedef capd::jaco::Index2DTwoComponents Index2DType;
   typedef Index2DType IndexType;
   typedef typename FFT1DType::IndexType Index1DType;
 
@@ -1126,8 +1123,8 @@ public:
 
   FFT2D(){}
   
-  FFT2D(int n_, int m_, IntervalType pi_) : SubspaceType(n, 2*n), n(n_), m(m_), fft1d(n, m, pi_), rProjection(m), mc1d(n),
-      gridOfModes(m, false), modesContainerOfGrid(n), s(2, 2, false), t(2, 2, false){
+  FFT2D(int n_, int m_, IntervalType pi_) : n(n_), m(m_), SubspaceType(n_, 2 * n_), fft1d(n_, m_, pi_), rProjection(m_), mc1d(n_),
+      gridOfModes(m_, false), modesContainerOfGrid(n_), s(2, 2, false), t(2, 2, false){
     int i, j;
     for(i=0; i < m; ++i)
       gridOfModes[i] = ModesContainer1DType(n);
@@ -1136,15 +1133,10 @@ public:
     for(i=0; i < 2; i++)
       for(j=0; j < 2; j++){
         s[i][j] = DFT2DGridType(m);
-        t[i][j] = ModesContainer2DType(n, modesContainerDim(n));
+        t[i][j] = ModesContainer2DType( n );
       }
   }
 
-  /**Returns dimension of a two dimensional modes container.
-   */
-  static int modesContainerDim(int n){
-    return 2*2*2*n*n;
-  }
 
   /**Takes 1D projection of 2D discrete set of modes, and returns 1D ModesContainer.
    *
@@ -1177,38 +1169,53 @@ public:
     }
   }
 
-
   /**calculates the scalar product
    * /f[
-   *  \sum_{k_1\in\text{a Projection}}{(k, a_{k_1})\cdot a_{k-k_1}}
+   *  \sum_{k_1\in\text{a Projection}}{ (a_{k_1}^1, a_{k_1}^2)\cdot b_{k-k_1}}
    * /f]
+   *
+   * where (a_{k_1}^1, a_{k_1}^2) are modes of a vector function, and b_{k-k_1} are modes of a scalar function (e.g.
+   * gradient of a
    */
-  inline void scalarProduct(const DFTGridType& gridJ, const DFTGridType& gridImJ, ModesContainer2DType& r){
-    s[0][0].multiply(gridJ[0], gridImJ[0]);
-    s[1][0].multiply(gridJ[1], gridImJ[0]);
-      s[0][1].multiply(gridJ[0], gridImJ[1]);
-    s[1][1].multiply(gridJ[1], gridImJ[1]);
 
-    IndexType index;
+
+  /**
+   * calculates the scalar product
+   * (U\cdot\nabla)V
+   *
+   * gridJ is the Fourier transform of U (two component vector, as U has two components)
+   *
+   * grid1ImJ is the Fourier transform of \nabla V_1 (also two component vector)
+   *
+   * grid2ImJ is the Fourier transform of \nabla V_2 (also two component vector)
+   */
+  inline void scalarProduct(const DFTGridType& gridJ, const DFTGridType& grid1ImJ, const DFTGridType& grid2ImJ, ModesContainer2DType& r){
+    s[0][0].multiply(gridJ[0], grid1ImJ[0]);
+    s[1][0].multiply(gridJ[1], grid1ImJ[1]);
+    s[0][1].multiply(gridJ[0], grid2ImJ[0]);
+    s[1][1].multiply(gridJ[1], grid2ImJ[1]);
+
+    IndexType index, index_projected;
     IndexRangeType ir;
     ir.setRange(0, capd::jaco::strong, n, capd::jaco::weak);
 
     inverseExtendedTransform(s[0][0], t[0][0]);
     inverseExtendedTransform(s[1][0], t[1][0]);
-      inverseExtendedTransform(s[0][1], t[0][1]);
+    inverseExtendedTransform(s[0][1], t[0][1]);
     inverseExtendedTransform(s[1][1], t[1][1]);
+    //attention: all t's above have one component
 
-
-    for(index = firstModeIndex(ir); !index.limitReached(ir); index.inc(ir)) {
-      t[0][index.l].set(index, index[0]*t[0][index.l][index]);
-      t[1][index.l].set(index, index[1]*t[1][index.l][index]);
-      r.set(index, t[0][index.l][index] + t[1][index.l][index]);
+    for(index = this->firstModeIndex(ir); !index.limitReached(ir); index.inc(ir)) {
+      //t[0][index.l].set(index, index[0]*t[0][index.l][index]);
+      //t[1][index.l].set(index, index[1]*t[1][index.l][index]);
+      index_projected = index;
+      index_projected.l = 0;
+      r[index] = t[0][index.l][index_projected] + t[1][index.l][index_projected];
     }
-
 
   }
 
-
+  //TODO: 12.02.14 nieprzetestowane, nie wiem czy w ogole dziala dobrze
   /**calculates the scalar product
    * /f[
    *  \sum_{k_1\in\text{a Projection}}{(k, a_{k_1})\cdot a_{k-k_1}}
@@ -1217,7 +1224,7 @@ public:
    * This version somehow detects symmetries , i.e. j == imj , in this case there is no need of calculating s[0][1] 
    * 
    */
-  inline void scalarProduct(int j, int imj, const DFTGridType& gridJ, const DFTGridType& gridImJ, ModesContainer2DType& r){
+/*  inline void scalarProduct(int j, int imj, const DFTGridType& gridJ, const DFTGridType& gridImJ, ModesContainer2DType& r){
     s[0][0].multiply(gridJ[0], gridImJ[0]);
     s[1][0].multiply(gridJ[1], gridImJ[0]);
     if(j != imj){
@@ -1259,12 +1266,14 @@ public:
       }
 
   }
+*/
 
-
+  ///TODO: 12.02.14 to chyba trzeba usunac, bo wprowadza kontuzje z extended transform, poza tym nie wiem co by to mialo
+  ///robic liczyc transformate tylko piwerszego componentu, ale po co?
   /**Write what are differences with extendedTransform. (it calculates only one coordinate)
    *
    */
-  inline void transform(const ModesContainer2DType& modes, DFT2DGridType& r){
+/*  inline void transform(const ModesContainer2DType& modes, DFT2DGridType& r){
     int k_2, j_1;
 
     ///first, calculate N independent FFTs, one for each fixed second index component
@@ -1291,6 +1300,7 @@ public:
     }
 
   }
+*/
 
   /**
    *

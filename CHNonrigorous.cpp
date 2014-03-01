@@ -46,9 +46,12 @@ void setRightBound( Double& i, Double b){
 #include "Pair.h"
 #include "FirstOrderJet.h"
 
-#include "capd/alglib/lib.h"
-#include "capd/alglib/hsschur.h"
+
+#include "capd/alglib/ap.h"
 #include "capd/alglib/hessenberg.h"
+#include "capd/alglib/hsschur.h"
+#include "capd/alglib/lib.h"
+
 
 #define _D 0
 
@@ -424,8 +427,8 @@ void calculateDiams(const IntervalVector& v, Interval& maxD){
 
 
 void basicTest(int testNumber, int approach){
-  int n = 22, //change FOJ1D stack dimension
-      m = 50,
+  int n = 12, //change FOJ1D stack dimension
+      m = 25,
       order = 7;
   Interval nu,
            step(0.0001);
@@ -454,39 +457,40 @@ void basicTest(int testNumber, int approach){
     ///3.choose the algorithm type, see enum AlgorithmType in FFTDynSys.h file
     //nu = 6.085;
     //nu = 3.546241427; //scaling 2 * pi
-    nu = 4;
+    nu = 3.56;
+    //nu = 4;
     //nu = 14.18496571; //scaling pi
     //nu = 56.73986284; //scaling pi/2
-    STEPS = 10000;
+    STEPS = 100000;
     //n = 17; //n has to be the same as above
     step = 0.00005;
     ss << "test1_CHproj_";
     srand(time(0));
 
-   /* u_0[Index1D(2)] = 0.330288;
+  /*u_0[Index1D(2)] = 0.330288;
     u_0[Index1D(6)] = -0.0161974;
     u_0[Index1D(10)] = 0.000751484;
     u_0[Index1D(14)] = -3.57331e-05; */
 
-    u_0[Index1D(3)] = 0.250095;
+  /*u_0[Index1D(3)] = 0.250095;
     u_0[Index1D(9)] = -0.0030652;
-    u_0[Index1D(15)] = 3.72671e-05;
+    u_0[Index1D(15)] = 3.72671e-05;*/
 
     //a case for which the solution goes really close to one attr fixed point, but ends at another fixed point
-    /*for(int i = 3; i < 4; i++){
+    for(int i = 1; i < 5; i++){
       //only one mode is forced , should be i = 2, i < 4
       if(i==3){
         if( rand() % 2 == 0 )
-          u_0[ Index1D(i) ].re = 6e-17 ;
+          u_0[ Index1D(i) ].re = 0 ;
         else
-          u_0[ Index1D(i) ].re = -6e-17 ;
+          u_0[ Index1D(i) ].re = 0 ;
       }else{
         if( rand() % 2 == 0 )
-          u_0[ Index1D(i) ].re = 1e-15 ;
+          u_0[ Index1D(i) ].re = 1e-10 ;
         else
-          u_0[ Index1D(i) ].re = -1e-15 ;
+          u_0[ Index1D(i) ].re = -1e-10 ;
       }
-    }*/
+    }
 
 
   }

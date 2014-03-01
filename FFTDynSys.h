@@ -132,7 +132,7 @@ public:
              optStep = maxStep;
 
     double coeffNorm = toDouble( rightBound(modes[order].maxOfNorms()) );
-    capd::rounding::DoubleRounding::roundNearest();
+//  capd::rounding::DoubleRounding::roundNearest();
     RealType Cstep = exp(log(epsilon / coeffNorm) / (order));
     Cstep = capd::max(Cstep, minStep);
 

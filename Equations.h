@@ -9,6 +9,7 @@
 #define EQUATIONS_H_
 
 #include "PolyBd.h"
+#include "FFT.h"
 #include <typeinfo>
 
 namespace capd{
@@ -108,7 +109,7 @@ public:
    * Where f(i) = e^{h\lambda_k} k^r
    */
   int maximumPoint(const RealType& h, int r, int k) const{
-    return ceil(sqrt(RealType(r/(2.*nu*h)).rightBound()));
+    return rightBound( ceil(rightBound( sqrt(RealType(r/(2.*nu*h)))) ) );
   }
   using SubspaceType::array2modeIndex;
 };
@@ -189,7 +190,7 @@ public:
      * Where f(i) = e^{h\lambda_k} k^r
      */
     int maximumPoint(const RealType& h, int r, int k) const{
-      return ceil(sqrt(RealType(r/(2.*nu*h)).rightBound()));
+      return rightBound(ceil( sqrt(RealType(r/(2.*nu*h))) ));
     }
     using SubspaceType::array2modeIndex;
 };
@@ -936,8 +937,8 @@ public:
                s2 = s(pb2);
 
       ScalarType unit;
-      setLeftBound( unit, -1. );
-      setRightBound( unit, 1. );
+      unit.setLeftBound( -1. );
+      unit.setRightBound( 1. );
 
       RealType t = 2. * C1 * C2 * sqrt(1. / ( (2. * s1 - 1.) * (2. * s2 - 1.) )) *
           (power(1. / ScalarType(M + k[0]), s1 - 0.5) * power(1. / ScalarType(M), s2 - 0.5) +
@@ -964,8 +965,8 @@ public:
         IndexRangeType range;
         range.setK_1Range(w_3 * w * M, weak, -1, weak);
         RealType unit;
-        setLeftBound( unit, -1. );
-        setRightBound( unit, 1. );
+        unit.setLeftBound( -1. );
+        unit.setRightBound( 1. );
 
         RealType divisor = k.maxNorm() == 0 ? 1 : power( VNormType::norm(k), s_ );
         RealType t = Ca * Cb / power(w_2  * w * M, sm - s_)   *  (power(2, s_) / divisor)  *  IndexType::template harmonicSumK_1<RealType, IndexRangeType, VNormType>(range, s_)  * unit;
@@ -1227,29 +1228,28 @@ public:
   /**Linear part of the vector field.
    */
   inline  virtual void L(const ModesContainerType& in, ModesContainerType& out) const{
-    out = in;
     IndexType i;
-    const IndexRangeType& range ((in.infiniteDimensional ? ir_M : ir_m));
+    const IndexRangeType& range ( ir_m );
 
-    for(i = firstModeIndex(range); !i.limitReached(range); i.inc(range)){
-      out[i] *= lambda_k(i);
+    for(i = this->firstModeIndex(range); !i.limitReached(range); i.inc(range)){
+      out[i] = this->lambda_k(i) * in[i];
     }
     ///here we dont care about the infinite part, it is handled in the moveParamsFunction
   }
 
-  /**Whole vector field. L + N.
+  /**
+   * Whole vector field.
    */
   inline void operator()(const ModesContainerType& in, ModesContainerType& out, int range = full){
     L(in, out);
 
-    N(in, tpb, range);
+    N(in, tmc, range);
 
-    out += tpb;
+    out += tmc;
     out += yc; ///add y_c
 
     out += forcing; ///add forcing
   }
-
 
   /**This function performs FFT transform, which is overestimations optimized. In order to reduce overestimations more fft's are required, therefore more parameters are required.
    *
@@ -2049,16 +2049,6 @@ public:
 };
 
 
-/** 2DCompatible version
- */
-template<class EquationT, class FFTT, int ORD>
-class DPDE22DCompatible : public DPDE2<EquationT, FFTT, ORD>{
-
-
-
-
-};
-
 
 
 /** This is a class representing a nonlinear PDE (this is the input to the integrator). It is the base for other classes representing
@@ -2083,6 +2073,8 @@ class DPDE22DCompatible : public DPDE2<EquationT, FFTT, ORD>{
  *
  * When VNormT is set to EuclideanNorm the program intentionally will not compile (because of efficiency reasons - the
  * function norm is not returning int anymore, it must return interval)  - but the case of EculideanNorm was tested too
+ *
+ * This works only for one dimensional case, as some optimizations are performed, exclusively for this case.
  */
 template<class EquationT, class FFTT, int ORD, class VNormT=capd::jaco::MaximumNorm<typename FFTT::IndexType> >
 class DPDE3 : public DPDE2<EquationT, FFTT, ORD>{
@@ -2503,22 +2495,22 @@ public:
   }
 
   inline virtual void L(const ModesContainerType& in, ModesContainerType& out) const{
-    out = in;
     IndexType i;
-    const IndexRangeType& range ((in.infiniteDimensional ? ir_M : ir_m));
+    const IndexRangeType& range ( ir_m );
 
-    for(i = firstModeIndex(range); !i.limitReached(range); i.inc(range)){
-      out[i] *= lambda_k(i);
+    for(i = this->firstModeIndex(range); !i.limitReached(range); i.inc(range)){
+      out[i] = this->lambda_k(i) * in[i];
     }
     ///here we dont care about the infinite part, it is handled in the moveParamsFunction
   }
 
-  /**Whole vector field.
+  /**
+   * Whole vector field.
    */
   inline void operator()(const ModesContainerType& in, ModesContainerType& out, int range = full){
     L(in, out);
-    N(in, tpb, range);
-    out += tpb;
+    N(in, tmc, range);
+    out += tmc;
     out += yc; ///add y_c
     out += forcing; ///add forcing
   }
@@ -2589,6 +2581,183 @@ public:
   using BaseClass::estimatePolynomialBoundForTheInfinitePart;
   using BaseClass::addBound;
 };
+
+
+template<class EquationT, class FFTT, int COMPONENTS , int ORD, class VNormT=capd::jaco::MaximumNorm<typename FFTT::IndexType> >
+class DPDE2HighDim : public EquationT{
+};
+
+
+/**A specialization of DPDE2 class for Burgers n dimensional, having nonlinearity (U\cdot\nabla)U,
+ * where the solution U is a vector of n components U=(u_1, u_2, ..., u_n).
+ *
+ * Specialization for n = 2 (2D Burgers).
+ */
+template<class EquationT, class FFTT, int ORD, class VNormT >
+class DPDE2HighDim< EquationT, FFTT, 2, ORD, VNormT> : public EquationT{
+public:
+
+  ///przebudowac pod przypadek 2D
+
+  typedef EquationT EquationType;
+  typedef FFTT FFTType;
+  typedef VNormT VNormType;
+
+  typedef typename FFTType::DFTGridType DFTGridType; //this is not taken from FFT class, as solution U has several components
+
+  typedef typename FFTType::ModesContainerType ModesContainerType; //this is not taken from FFT class, as solution U has several components
+
+  typedef capd::vectalg::Container<DFTGridType, ORD> GridsContainerType;
+  typedef capd::vectalg::Container<ModesContainerType, ORD> ModesContainerContainerType;
+
+  typedef typename FFTType::IndexType IndexType;
+  typedef typename FFTType::IndexRangeType IndexRangeType;
+  typedef typename FFTType::ScalarType ScalarT; ///< this is actual scalar, ScalarType typename is reserved for enclosure functions
+  typedef typename EquationType::ComplexType ComplexScalarType;
+  typedef typename EquationType::RealType RealType;
+  typedef RealType ScalarType; ///< ScalarType has to be this, because enclosure functions are using this
+  typedef capd::vectalg::Vector<RealType, 0> VectorType;
+  ///przebudowac podprz 2D, koniec
+
+  int m,
+      M;
+
+  int dftPts1; ///<number of discrete points for FFT, such that aliasing is omitted
+  int& dftPts; ///<an alias for dftPts1
+  FFTType fft1; ///<used for calculating only the finite dimensional part (takes m elements and transforms them)
+
+  IndexRangeType ir_m,
+                 ir_finiteTail;
+
+  DFTGridType tg1, tg1_2, tg1_3, sdft; ///<auxiliary variables, remember to initialize them!
+  ModesContainerType tmc, tmc2, tmc3; ///<auxiliary variables, remember to initialize them!
+
+  //below are temporary variables for overestimation optimized FFT
+  ModesContainerType delta_u, delta_v, mu, mv, r1;
+
+  DFTGridType r_delta_u, r_abs_mu, r_delta_v, r_abs_mv, r_mu, r_mv, s1, s2, s3, s4;
+
+  DFTGridType empty,///<auxiliary variable
+              rhs;///<auxiliary variable
+  bool useFFT;
+  ModesContainerType td,
+                     tl;
+  VectorType yc,///<this is y_c ([\delta] midpoint)
+             forcing;///<this is an optional forcing
+
+  RealType pi;
+
+
+  DPDE2HighDim(int m_, int dftPts1_, RealType nu_, RealType pi_, int order) : EquationType(m_, m_, nu_), m(m_),
+      dftPts1(dftPts1_), dftPts(dftPts1), fft1(m, dftPts1, pi_), ir_m(IndexType::zero()), tg1(dftPts1),
+      tg1_2(dftPts1), tg1_3(dftPts1), sdft(dftPts1), tmc(m), tmc2(m), tmc3(m), empty(dftPts1), rhs(dftPts1), useFFT(true),
+      td(m), tl(m), yc(ModesContainerType::modes2realArraySizeStatic(m_)), forcing(ModesContainerType::modes2realArraySizeStatic(m_)),
+      pi(pi_){
+    ir_m.setRange(0, strong, m, weak);
+
+    /*if( !(typeid(capd::jaco::Index2D)==typeid(typename FFTType::IndexType) and typeid(capd::jaco::Index2D)==typeid(typename ModesContainerType::IndexType)) ){
+      std::cerr << "Used classes of Incompatible indexes in DPDE2HighDim class\n";
+      throw std::runtime_error("Used classes of Incompatible indexes in DPDE2HighDim class\n");
+    }*/
+
+  }
+
+  inline void CalculateGradients(const ModesContainerType& u, ModesContainerType& grad1, ModesContainerType& grad2){
+
+    for(IndexType ind = fft1.firstModeIndex(ir_m), ind_2; !ind.limitReached(ir_m); ind.inc(ir_m)){
+      if(ind.l == 0){
+        grad1.set(ind,  ind[0] * (ComplexScalarType::i() * u[ind])); //partial u_1 / partial x_1
+        ind_2 = ind;
+        ind_2.l = 1;
+        grad1.set(ind_2,  ind[1] * (ComplexScalarType::i() * u[ind])); //partial u_1 / partial x_2
+      }else{
+        grad2.set(ind,   ind[1] * (ComplexScalarType::i() * u[ind])); //partial u_1 / partial x_1
+        ind_2 = ind;
+        ind_2.l = 0;
+        grad2.set(ind_2, ind[0] * (ComplexScalarType::i() * u[ind])); //partial u_1 / partial x_2
+      }
+    }
+
+  }
+
+  inline void project(const ModesContainerType& in, ModesContainerType& projected){
+    IndexType i;
+    const IndexRangeType& range ( ir_m );
+    IndexType i2;
+
+    for(i = this->firstModeIndex(range), i.l = 0; !i.limitReached(range); i.inc(range, true)){
+      //calculate scalar products
+      ScalarT scpr = i[0] * in[i] + i[1] * in[i.nextComponent()];
+      RealType norm = i.squareEuclNorm();
+      projected[i] = in[i] - (i[0] / norm) * scpr;
+      projected[i.nextComponent()] = in[i.nextComponent()] - (i[1] / norm) * scpr;
+
+    }
+  }
+
+  //calculates the scalar product (U \cdot \nabla)U
+  inline void CalculateNonlinearTermUsingFFT(const ModesContainerType& in, ModesContainerType& out){
+    if(!in.infiniteDimensional){
+      if(ScalarT::initialConditionIsRealValued())
+        ScalarT::switchToComplexValued();
+      CalculateGradients(in, tmc, tmc2);
+      project(in, tmc3); //project on the subspace orthogonal to k
+      //std::cout << "projected=\n" << tmc3 << "\n";
+      fft1.extendedTransform(tmc3, tg1); //calculate dft of the projected part
+      //std::cout << "tg1=\n" << tg1 << "\n";
+      fft1.extendedTransform(tmc, tg1_2);
+      //std::cout << "tg1_2=\n" << tg1_2 << "\n";
+      fft1.extendedTransform(tmc2, tg1_3);
+      //std::cout << "tg1_3=\n" << tg1_3 << "\n";
+      fft1.scalarProduct( tg1, tg1_2, tg1_3, out );
+      if(ScalarT::initialConditionIsRealValued())
+        ScalarT::switchToRealValued();
+    }else{
+      std::cerr << "DPDE2HighDim.CalculateNonlinearTermUsingFFT is implemented only for finite dimension.";
+      throw std::runtime_error("DPDE2HighDim.CalculateNonlinearTermUsingFFT is implemented only for finite dimension.");
+    }
+
+  }
+
+
+  /**Nonlinear part of the vector field.
+   */
+
+  inline virtual void N(const ModesContainerType& in, ModesContainerType& out, int range = full){
+    if(useFFT){
+      CalculateNonlinearTermUsingFFT(in, out);
+    }else{
+      std::cerr << "DPDE2HighDim.N is implemented only for FFT.";
+      throw std::runtime_error("DPDE2HighDim.N is implemented only for FFT.");
+    }
+  }
+
+
+  inline  virtual void L(const ModesContainerType& in, ModesContainerType& out) const{
+    IndexType i;
+    const IndexRangeType& range ( ir_m );
+
+    for(i = this->firstModeIndex(range); !i.limitReached(range); i.inc(range)){
+      out[i] = this->lambda_k(i) * in[i];
+    }
+    ///here we dont care about the infinite part, it is handled in the moveParamsFunction
+  }
+
+
+  inline void operator()(const ModesContainerType& in, ModesContainerType& out, int range = full){
+    L(in, out);
+
+    N(in, tmc, range);
+
+    out += tmc;
+    out += yc; ///add y_c
+
+    out += forcing; ///add forcing
+  }
+
+};
+
+
 
 /**
  * This will be class representing 2D NS equations - stream function formulation

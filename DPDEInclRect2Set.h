@@ -151,7 +151,7 @@ void DPDEInclRect2Set<MatrixType, TailT>::move(DiffIncl & diffIncl, int stepNumb
   }///end step 4 of Algorithm 1
 
   {///step 10 of Algorithm 1. Rearrangements
-  x = midVector( m_x + Deltha);
+  x = midVector( m_x + Deltha );
   VectorType dr = m_x + Deltha - x;
   MatrixType BT = Transpose(m_B);
   m_r = m_r + BT * dr;

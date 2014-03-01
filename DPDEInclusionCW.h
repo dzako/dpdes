@@ -104,7 +104,6 @@ public:
       m_W_2 = diffInclusionEnclosure(m_W_2);
       validated = m_diffIncl.validateT(step, x_0, m_W_2, validate, farTailValidate, guessedC, previousL, previousdL, changedLastStep, firstStep, recalculateN);
     }
-    std::cout << "validating steps nr=" << stepNr << "\n";
 //    ::TOTAL_ITER += stepNr;
 
 //    std::cout << "validating steps nr=" << stepNr << "\n";
@@ -124,7 +123,9 @@ public:
 
       //values are copied from equation (was calculated in last validateT step
       m_N = m_diffIncl.m_Nt;
+
       //m_diffIncl.N(m_W_2, m_N);
+
       m_diffIncl.bt(m_N, bt);
       m_diffIncl.gt(step, x_0, m_N, gt);
       for(i = first; i <= last; ++i) {
@@ -164,8 +165,8 @@ public:
 
     ///CHECKS IF IN FACT VALIDATED TAIL IS OK, in the sense satisfies T([0,h])\subset T
   #if __VERIFY_TAIL__
-    m_W_2.copyFinitePartFrom(x_0);
-    m_W_2 = diffInclusionEnclosure(m_W_2);
+    //m_W_2.copyFinitePartFrom(x_0);
+    //m_W_2 = diffInclusionEnclosure(m_W_2);
     m_diffIncl.N(m_W_2, m_N);
 
     if(!x_0.subset(m_W_2)) {
@@ -457,7 +458,6 @@ public:
           break;
       }
     }
-    std::cout << "Aiterations=" << Aiterations << "\n";
     // we recompute remainder because norm of A can be smaller than approximation : AnNorm
     ScalarType remainder = right((*m_norm)(A) * AtNorm / (n  - AtNorm ));    
     for(i=0; i < J.numberOfRows(); ++i)

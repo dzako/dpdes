@@ -27,6 +27,14 @@
 //  #define PI 3.1415926535897932384626433832795
 #endif
 
+// MOCK FUNCTIONS NEEDED FOR NONRIGOROUS INTEGRATOR TO WORK
+void setLeftBound( Interval& i, DOUBLE b){
+  i.setLeftBound(b);
+}
+void setRightBound( Interval& i, DOUBLE b){
+  i.setRightBound(b);
+}
+
 #include "ComplexScalar.h"
 #include "FirstOrderJet.h"
 #include "Odd.h"
@@ -71,7 +79,7 @@ typedef capd::jaco::Odd<Interval, Index2D, Norm2D> Real2D;
 typedef capd::dynset::C0Rect2RSet<IntervalMatrix> C0Set;
 //FFT2D
 
-typedef capd::jaco::FFT2DOneComponent<ComplexScalar, ComplexScalar, capd::jaco::MaximumNorm<Index2D>, 0, 0, RealPolynomialBound> FFT2D;
+typedef capd::jaco::FFT2DOneComponent<ComplexScalar, ComplexScalar, 0, 0, RealPolynomialBound> FFT2D;
 
 typedef capd::jaco::DPDE2<Burgers, FFT2D, 0> BurgersDPDE; ///set equation here
 
@@ -79,7 +87,8 @@ typedef capd::jaco::FirstOrderJet<ComplexDerivativePair, 0> FOJ2D;
 
 typedef capd::jaco::ComplexPolyBdJetOptimized<Interval, FOJ2D, Index2D, 0> ModesContainer;
 
-typedef capd::jaco::FFT2DOneComponent<FOJ2D, ComplexScalar, capd::jaco::MaximumNorm<Index2D>, 0, 0, ModesContainer> JetFFT2D;
+//remove MaximumNorm template parameter - it was removed from the template definition
+typedef capd::jaco::FFT2DOneComponent<FOJ2D, ComplexScalar, 0, 0, ModesContainer> JetFFT2D;
 
 typedef capd::jaco::DPDE2<Burgers, JetFFT2D, 0> JetBurgersDPDE; ///set equation here
 

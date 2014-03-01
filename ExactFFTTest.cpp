@@ -54,14 +54,14 @@ typedef JetFFT1D::ModesContainerType Modes1DJetContainer;
 typedef JetFFT1D::VectorType IntervalVector;
 
 typedef capd::jaco::Index2D Index2D;
-typedef capd::jaco::FFT2D<ComplexScalar, ComplexScalar, capd::jaco::MaximumNorm<Index2D>, N, M> FFT2D;
-typedef capd::jaco::FFT2DOneComponent<ComplexScalar, ComplexScalar, capd::jaco::MaximumNorm<Index2D>, N, M> FFT2DOneComponent;
-typedef FFT2D::ModesContainerType Modes2DContainer;
+typedef capd::jaco::FFT2D<ComplexScalar, ComplexScalar, N, M> FFT2D;
+typedef capd::jaco::FFT2DOneComponent<ComplexScalar, ComplexScalar, N, M> FFT2DOneComponent;
+typedef FFT2DOneComponent::ModesContainerType Modes2DContainer;
 typedef Complex1DVector ComplexVector;
 typedef Modes2DContainer::VectorType Complex2DVector;
 
 
-typedef FFT2D::IndexRangeType IndexRange;
+typedef FFT2DOneComponent::IndexRangeType IndexRange;
 
 void printVector(const Modes1DContainer::VectorType& v){
   int i;

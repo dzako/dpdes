@@ -298,9 +298,9 @@ inline const ComplexScalar<ScalarT> operator*(const ScalarT& d, const ComplexSca
   return r;
 }
 
-//DEDICATED FOR INTERVAL OPTIMIZATIONS , FOR NONRIGOROUS CALCULATIONS SHOULD BE TURNED OFF
+//updated 08.02.14 now the program compiles without problems for both of the non-rigorous and rigorous version
 template<typename ScalarT>
-inline const ComplexScalar<ScalarT> operator*(double d, const ComplexScalar<ScalarT>& ci){
+inline const ComplexScalar<ScalarT> operator*(typename ScalarT::BoundType d, const ComplexScalar<ScalarT>& ci){
   ComplexScalar<ScalarT> r;
   r.re = ScalarT(d) * ci.re;
   r.im = ScalarT(d) * ci.im;

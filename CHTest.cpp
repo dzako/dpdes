@@ -17,7 +17,7 @@
 bool COUNT_OPERATIONS = false;
 #include "intervals/Interval.hpp" // for operations count
 
-#define DOUBLE long double
+#define DOUBLE double
 #if __FILIB__
   typedef capd::filib::Interval<DOUBLE> Interval;
 #else
@@ -58,6 +58,8 @@ long long unsigned TOTAL_ITER;
 
 #include "DPDEInclusionCW.h"
 #include "InclRect2Set.hpp"
+
+#include "PolyBdInputReader.h"
 
 #define _D 0
 
@@ -121,8 +123,8 @@ void calculateDiams(const IntervalVector& v, Interval& maxD){
 
 
 void basicTest(int testNumber, int approach){
-  int n = 22, //change FOJ1D stack dimension
-      m = 45,
+  int n = 12, //change FOJ1D stack dimension
+      m = 25,
       order = 7;
   Interval nu,
            step(0.0001);
@@ -150,10 +152,11 @@ void basicTest(int testNumber, int approach){
 
   if(testNumber == 0){
     //nu = 3.546241427;
-    nu = 3.546241427;
+    //nu = 3.546241427;
+    nu = 3.56;
 
-    STEPS = 10000;
-    step = 0.00007;
+    STEPS = 50000;
+    step = 0.002;
 
     srand(time(0));
     for(int i = 1; i < 5; i++){
@@ -251,9 +254,9 @@ void basicTest(int testNumber, int approach){
       IntervalVector s = (IntervalVector)set;
       log << s << "\n";
 
-      for(int j = 0; j < s.dimension(); j++){
+/*    for(int j = 0; j < s.dimension(); j++){
         log << rightBound( diam(s[j]) ) << ", ";
-      }
+      }*/
       log << "\n";
     }
   }
@@ -267,13 +270,18 @@ void basicTest(int testNumber, int approach){
 }
 
 void diffInclTest(int testNumber, int approach){
-  int m = 22, //change FOJ1D stack dimension
+
+  PolyBdInputReader<RealPolynomialBound> inputReader("input");
+
+  std::cout << "Read polynomial bound=\n" << inputReader.polyBd << "\n";
+
+  int m = 15, //change FOJ1D stack dimension
       M = 100,
-      dftPts = 50,
+      dftPts = 36,
       dftPts2 = 500,
       order = 7;
   Interval nu,
-           step(0.0001);
+           step(0.00001);
 
   ///1.initialize FOJ, the dimension of the first order jet and the initial condition type defined by a DPDEContainer instance
   ///should be provided, see FOJ1D::initialize description
@@ -292,19 +300,22 @@ void diffInclTest(int testNumber, int approach){
   ///end FOJ initialization
 
 
-  Interval r(-1e-11, 1e-11);
+  Interval r(-1e-15, 1e-15);
   Index1D idx;
+
   RealPolynomialBound u_0(m, M, container), enclosure(m);
+
 
   setC(u_0, 0);
   setS(u_0, 6);
 
   if(testNumber == 0){
     //nu = 3.546241427;
-    nu = 3.546241427;
+    //nu = 3.546241427;
+    nu = 3.56;
 
-    STEPS = 10000;
-    step = 0.00007;
+    STEPS = 200000;
+    step = 0.0001;
 
     srand(time(0));
     for(int i = 1; i < 5; i++){
@@ -359,7 +370,6 @@ void diffInclTest(int testNumber, int approach){
     ss << "test2_CHincl_";
   }
 
-
   DPDEInclusionCW3 diffIncl(m, dftPts, M, dftPts2, PI, nu, order, step, MaxNorm());
 
   ss  << "nu_" << rightBound(nu);
@@ -393,6 +403,7 @@ void diffInclTest(int testNumber, int approach){
   int i;
   //  //end init mo
   InclRect2Set set(u_0);
+
   Interval max;
 
   start = clock();
@@ -400,6 +411,9 @@ void diffInclTest(int testNumber, int approach){
 //    std::cout << "step #" << i << " ";
     set.move(diffIncl);
     log << (IntervalVector)set << "\n";
+    if(i % 100 == 0){
+      log << set.getPerturbationParams() << "\n";
+    }
   }
   log << "\nset at the end (infinite dimensional): " << set.getPerturbationParams() << "\n";
   calculateDiams((IntervalVector)set, max);
@@ -410,9 +424,101 @@ void diffInclTest(int testNumber, int approach){
   log << "RRadditionsSum=" << RRadditionsSum << "\n";
 }
 
+void providedInputTest(const char* fileName, int testNumber, int approach){
+    PolyBdInputReader<RealPolynomialBound> inputReader(fileName);
+
+    std::cout << "Read polynomial bound=\n" << inputReader.polyBd << "\n";
+
+    int m = inputReader.m, //change FOJ1D stack dimension
+        M = inputReader.M,
+        dftPts = 36,
+        dftPts2 = 500,
+        order = 7,
+        STEPS = 100000;
+    Interval nu,
+             step(0.00001);
+
+    //the same as in diffInclTest
+    STEPS = 200000;
+    step = 0.0002;
+
+    ///1.initialize FOJ, the dimension of the first order jet and the initial condition type defined by a DPDEContainer instance
+    ///should be provided, see FOJ1D::initialize description
+
+    clock_t start, end;
+
+    capd::auxil::OutputStream log(std::cout, false, true);
+    std::stringstream ss;
+
+    ///begin FOJ initialization for FFT integrator
+    capd::jaco::DPDEContainer container = inputReader.container;
+    ///2.set here the subspace of the initial condition e.g. setToRealValuedOdd means that the initial condition is real valued odd
+    FOJ1D::initialize(ModesContainer1D::modes2arraySizeStatic(m), container);
+    ///end FOJ initialization
+
+    RealPolynomialBound u_0 = inputReader.polyBd , enclosure(m);
+
+    nu = 3.56;
+
+    ss << "test1_providedInput_";
+
+    //FFTDynSys dynsys( n, m, step, order, PI, nu);
+    DPDEInclusionCW3 diffIncl(m, dftPts, M, dftPts2, PI, nu, order, step, MaxNorm());
+
+    ss  << "nu_" << rightBound(nu);
+    if(approach == 0)
+      ss << "_direct.txt";
+    if(approach == 1)
+      ss << "_fft.txt";
+    if(approach == 2)
+      ss << "_fftbutforddirect.txt";
+    log.logfile(ss.str().c_str(), true); log.log = true;
+    time_t rawtime;
+    time ( &rawtime );
+    log << "The current local time is: " << ctime (&rawtime) << "\n";
+    log << "Taylor method order=" << order << ", constant time step=" << step << "\n";
+    log << "Galerkin projection dimension m=" << m << ", M_{FFT}=" << dftPts << "\n";
+    log << "the whole infinite dimensional system is being integrated (the Lohner algorithm for differential inclusions is used).\n";
+    if(approach == 0){
+      diffIncl.getDynamicalSystem().setJetDynSysAlgorithmType(capd::jaco::direct);
+      log << "Using the direct approach\n";
+    }else{
+      if(approach == 1){
+        diffIncl.getDynamicalSystem().setJetDynSysAlgorithmType(capd::jaco::FFT);
+        log << "Using the FFT approach\n";
+      }else{
+        diffIncl.getDynamicalSystem().setJetDynSysAlgorithmType(capd::jaco::FFTButFirstOrderDirect);
+        log << "Using the FFT approach, but the first order normalized derivative is calculated directly to avoid a blowup\n";
+      }
+    }
+
+    log << "initial condition (infinite dimensional):\n" << u_0 << "\nitegration started, the output below is the Galerkin projection of the set at each timestep\n";
+    int i;
+    //  //end init mo
+    InclRect2Set set(u_0);
+    //C0Set set(u_0, 1);
+
+    Interval max;
+
+    start = clock();
+    for(i=0; i < STEPS; ++i){
+  //    std::cout << "step #" << i << " ";
+      set.move(diffIncl);
+      log << (IntervalVector)set << "\n";
+      if(i % 100 == 0){
+        log << set.getPerturbationParams() << "\n";
+      }
+    }
+    log << "\nset at the end (infinite dimensional): " << set.getPerturbationParams() << "\n";
+    calculateDiams((IntervalVector)set, max);
+    log << "max diameter of the set at the end: " << max << "\n";
+    end = clock();
+    log << "time: "<<(end-start)/CLOCKS_PER_SEC<<"\n";
+}
+
 int main(int argc, char * argv[]){
   setLoggers();
-  if(argc != 4){
+  if(argc != 4 && argc != 5){
       std::cerr << "Number of arguments wrong.\nUsage: ./CHTest [projection|inclusion] test_number approach_number\n" <<
                    "if \"projection\" is specified then the Galerkin projection is integrated, when \"inclusion\" is specified the " <<
                    "whole system is integrated (using the Lohner algorithm for inclusions)" <<
@@ -425,11 +531,15 @@ int main(int argc, char * argv[]){
         if(strcmp(argv[1], "inclusion") == 0){
           diffInclTest(atoi(argv[2]), atoi(argv[3]));
         }else{
-          std::cerr << "Number of arguments too small.\nUsage: ./CHTest [projection|inclusion] test_number approach_number\n" <<
-                   "if \"projection\" is specified then the Galerkin projection is integrated, when \"inclusion\" is specified the " <<
-                   "whole system is integrated (using the Lohner algorithm for inclusions)" <<
-                   "\ntest_number is the test index, which corresponds to the index provided in Figure 1.21," <<
-                   "\napproach_number is the approach type, 0 - the direct approach, 1 - the FFT approach, 2 - the FFT approach, but the first normalized derivative is calculated directly, in order to avoid blow-ups.\n";
+          if(strcmp(argv[1], "input") == 0){
+            providedInputTest(argv[2], atoi(argv[3]), atoi(argv[4]));
+          }else{
+            std::cerr << "Number of arguments too small.\nUsage: ./CHTest [projection|inclusion] test_number approach_number\n" <<
+                     "if \"projection\" is specified then the Galerkin projection is integrated, when \"inclusion\" is specified the " <<
+                     "whole system is integrated (using the Lohner algorithm for inclusions)" <<
+                     "\ntest_number is the test index, which corresponds to the index provided in Figure 1.21," <<
+                     "\napproach_number is the approach type, 0 - the direct approach, 1 - the FFT approach, 2 - the FFT approach, but the first normalized derivative is calculated directly, in order to avoid blow-ups.\n";
+          }
         }
       }
     }

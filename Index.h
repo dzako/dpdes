@@ -683,10 +683,26 @@ inline bool operator>(const Index2D& i1, const Index2D& i2){
 class Index2DTwoComponents : public Index{
 public:
   Index2DTwoComponents() : Index(){}
+  Index2DTwoComponents(int k0, int k1){
+    k[0] = k0;
+    k[1] = k1;
+  }
+  Index2DTwoComponents(int k0, int k1, int l_){
+    k[0] = k0;
+    k[1] = k1;
+    l = l_;
+  }
+
   inline Index2DTwoComponents(const Index2DTwoComponents& i2) : Index(i2){}
   inline virtual int d() const{return 2;}
   
   inline virtual int components() const{ return 2;}
+
+  inline Index2DTwoComponents nextComponent() const{
+    Index2DTwoComponents t(*this);
+    t.l = ((int)(t.l + 1)) % components();
+    return t;
+  }
 
   /**Switches l (component of a mode) during increasing
    *
@@ -757,19 +773,53 @@ public:
   }
 
   inline int mode2array(int m, bool re, int includeZero = withZero) const{
-    if(re)
-      return 2*(k[0]+m+(2*m+1)*k[1]+(2*m*m+3*m+1)*l); //index of the first mode stored is (i_0,i_1)=(-m,0) (upper halfspace is for i_1>=0)
-    return 2*(k[0]+m+(2*m+1)*k[1]+(2*m*m+3*m+1)*l)+1;
+    //this part is copied from Index2D
+    int t = (includeZero == withoutZero ? -1 : 0);
+
+    int r;
+    if(k[1] == 0)
+      r = k[0] + t;
+    else
+      r = k[1] * (2 * m + 1) + k[0] + t; //this is mysterious, but works OK
+
+    r *= 2;
+
+    //end of this part copied from Index2D
+    if(l == 1)
+      r++;
+
+
+    return re ? 2 * r : 2 * r + 1;
   }
 
   inline static Index2DTwoComponents array2modeIndex(int m, int i, int includeZero = withZero){
+    int t = (includeZero == withoutZero ? -1 : 0);
+
     Index2DTwoComponents r;
-    i /= 2;
-    r.l = i / (2*m*m+3*m+1);
-    i = i % (2*m*m+3*m+1);
-    r[1] = i / (2*m+1);
-    i = i % (2*m+1);
-    r[0] = i - m;
+    if(i <= 2 * (2 * (m + t) + 1) ){
+      r[1] = 0;
+      r[0] = i / 4 + t;
+      r.l = (i / 2) % 2 == 1; //we check if l==1 by dividing by 2, and checking if % 2 is eq to one, i = 2*2*(k_0+t)
+    }else{
+      int s = i;
+      s /= 2;
+      s -= 2 * t;
+
+      r.l = s % 2 == 1;
+
+      s /= 2; //we divide s by 2 in order to recover r[0] and r[1]
+      //maybe can be simplified? we have to check if p is <= m, because r[0] can be negative, in this case to recover r[0]
+      //(u + 1) * (2 * m + 1) has to be subtracted from s.
+      int u = s / (2 * m + 1);
+      int p =  s - u * (2 * m + 1);
+
+      if(p <= m)
+        r[0] = p;
+      else
+        r[0] = s - (u + 1) * (2 * m + 1);
+
+      r[1] = (s - r[0]) / (2 * m + 1);
+    }
     return r;
   }
 
@@ -778,14 +828,7 @@ public:
       re = true;
     else
       re = false;
-    Index2DTwoComponents r;
-    i /= 2;
-    r.l = i / (2*m*m+3*m+1);
-    i = i % (2*m*m+3*m+1);
-    r[1] = i / (2*m+1);
-    i = i % (2*m+1);
-    r[0] = i - m;
-    return r;
+    return array2modeIndex(m, i, includeZero);
   }
 
   friend std::ostream& operator<<(std::ostream& out, const Index2DTwoComponents& i) // output
@@ -871,85 +914,6 @@ inline bool operator>(const Index2DTwoComponents& i1, const Index2DTwoComponents
 
 //========================================================================================================================
 
-
-///TODO: in construction
-class Index3D : public Index{
-public:
-  Index3D() : Index(){}
-  inline Index3D(const Index3D& i2) : Index(i2){}
-  inline virtual int d() const{return 3;}
-
-  inline virtual int components() const{ return 3;}
-  
-  inline Index3D operator/(double divisor) const{
-    Index3D r(*this);
-    r.k[0]=k[0]/divisor;
-    r.k[1]=k[1]/divisor;
-    r.k[2]=k[2]/divisor;
-    return r;
-  }
-  inline Index3D operator-() const{
-    Index3D r(*this);
-    r.k[0]=-r.k[0];
-    r.k[1]=-r.k[1];
-    r.k[2]=-r.k[2];
-    return r;
-  }
-
-  inline static Index3D zero(){
-    Index3D i3D;
-    i3D[0]=0;
-    i3D[1]=0;
-    i3D[2]=0;
-    return i3D;
-  }
-
-  inline int orderNorm() const{
-    return 0;//k[0]+max+(2*max+1)*k[1];
-  }
-
-  //TODO: hasn't been tested
-  inline int mode2array(int m, bool re) const{
-    if(re)
-      return 2*(k[0]+m+2*(m+1)*(k[1]+m)+(4*m*m+6*m+2)*k[2]+(4*m*m*m+10*m*m+7*m+2)*l);
-    return 2*(k[0]+m+2*(m+1)*(k[1]+m)+(4*m*m+6*m+2)*k[2]+(4*m*m*m+10*m*m+7*m+2)*l)-1;
-  }
-
-  //TODO: not done
-  inline static Index3D firstInUpperHalfspace(){
-    Index3D index;
-    return index;
-  }
-
-  friend std::ostream& operator<<(std::ostream& out, const Index3D& i) // output
-  {
-    out<<"("<<i.k[0]<<", "<<i.k[1]<<", "<<i.k[2]<<"), "<<i.l;
-    return out;
-  }
-
-  //TODO: not implemented
-  inline bool storedExplicitly() const{
-    return true;
-  }
-};
-
-inline Index3D operator-(const Index3D& i1, const Index3D& i2){
-  Index3D r(i1);
-  r.k[0]=i1.k[0]-i2.k[0];
-  r.k[1]=i1.k[1]-i2.k[1];
-  r.k[2]=i1.k[2]-i2.k[2];
-  return r;
-}
-
-inline Index3D operator+(const Index3D& i1, int i){
-  Index3D r(i1);
-  r.k[0]=i1.k[0]+i;
-  return r;
-}
-
-inline bool operator<=(const Index3D& i, int k){
-  return i.k[2]<=k;
-}
 
 
 }

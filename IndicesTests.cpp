@@ -19,12 +19,16 @@
 class IndicesTester{
 public:
   typedef capd::intervals::Interval<double> Interval;
+  typedef capd::jaco::Index2DTwoComponents Index2DTwoComponents;
   typedef capd::jaco::Index2D Index2D;
   typedef capd::jaco::Index1D Index1D;
   typedef capd::jaco::MaximumNorm<Index1D> MaximumNorm1D;
   typedef capd::jaco::MaximumNorm<Index2D> MaximumNorm2D;
-  typedef capd::jaco::FourierConvolutionIndexRange<Index2D, typename capd::jaco::MaximumNorm<Index2D> > IndexRange2D;
+  typedef capd::jaco::MaximumNorm<Index2DTwoComponents> MaximumNorm2DTwoComponents;
   typedef capd::jaco::FourierConvolutionIndexRange<Index1D, typename capd::jaco::MaximumNorm<Index2D> > IndexRange1D;
+  typedef capd::jaco::FourierConvolutionIndexRange<Index2D, typename capd::jaco::MaximumNorm<Index2D> > IndexRange2D;
+  typedef capd::jaco::FourierConvolutionIndexRange<Index2DTwoComponents, typename capd::jaco::MaximumNorm<Index2DTwoComponents> > IndexRange2DTwoComponents;
+  typedef capd::jaco::Real<Interval, Index2DTwoComponents, MaximumNorm2DTwoComponents> Real2DTwoComponents;
   typedef capd::jaco::Real<Interval, Index2D, MaximumNorm2D> Real2D;
   typedef capd::jaco::Real<Interval, Index1D, MaximumNorm1D> Real1D;
   std::ofstream out;
@@ -158,6 +162,24 @@ public:
     out.close();
   }
 
+  ///Index2DTwoComponents test
+  void test6(int m){
+    out.open("test.txt");
+
+    Index2DTwoComponents index;
+    IndexRange2DTwoComponents ir(index);
+    Real2DTwoComponents real(m, 2*m);
+    ir.setRange(0, capd::jaco::strong, m, capd::jaco::weak);
+    for(index = real.firstModeIndex(ir); !index.limitReached(ir); index.inc(ir)){
+      out<<index<<" "<<index.mode2array(m, 1)<<" "<<index.mode2array(m, 0);
+      out<<" "<<Index2DTwoComponents::array2modeIndex(m, index.mode2array(m, 1))<<
+      " "<<Index2DTwoComponents::array2modeIndex(m, index.mode2array(m, 0)) << "\n";
+    }
+
+    out.close();
+  }
+
+
 
 };
 
@@ -172,7 +194,7 @@ int main(int argc, char * argv[])
   if(argc!=2)
     std::cerr<<"Wrong nr of params!\n";
   else
-    tester.test5(atoi(argv[1]));
+    tester.test6(atoi(argv[1]));
   
 //  if(argc != 2)
 //    std::cerr << "Wrong nr of params!\n";

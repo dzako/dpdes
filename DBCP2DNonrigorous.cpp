@@ -69,7 +69,7 @@ typedef capd::jaco::CH<RealPolynomialBound> CH;
 typedef capd::jaco::DBCP<RealPolynomialBound> DBCP;
 
 //FFT1D
-typedef capd::jaco::FFT2DOneComponent<ComplexScalar, ComplexScalar, MaximumNorm, 0, 0, RealPolynomialBound> FFT2D;
+typedef capd::jaco::FFT2DOneComponent<ComplexScalar, ComplexScalar, 0, 0, RealPolynomialBound> FFT2D;
 typedef capd::jaco::DPDE3<DBCP, FFT2D, 0> SHDPDE; ///set equation here
 
 typedef capd::jaco::FFTBasicDynSys<SHDPDE, 0> FFTDynSys;

@@ -72,7 +72,7 @@ extern inline void setLoggers(){
 }
 
 ///verification flags
-#define __VERIFY_ENCLOSURE__ 0 //whether to check if validated rough-enclosure satisfies theorem assumptions (is in fact enclosure)
+#define __VERIFY_ENCLOSURE__ 1 //whether to check if validated rough-enclosure satisfies theorem assumptions (is in fact enclosure)
                                //slower calculations, but with guaranteed enclosures.
 #define __VERIFY_TAIL__ 1 //whether to check if validated tail satisfies theorem assumptions (is in fact enclosure and T([0,h])\subset T),
                           //slower calculations, but with guaranteed tail enclosures.
