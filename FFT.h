@@ -1177,68 +1177,16 @@ public:
     }
   }
 
-
-/*  inline void scalarProduct(const DFTGridType& gridJ, const DFTGridType& grid1ImJ, const DFTGridType& grid2ImJ, ModesContainer2DType& r){
-    s[0][0].multiply(gridJ[0], grid1ImJ[0]);
-    s[1][0].multiply(gridJ[1], grid1ImJ[1]);
-    s[0][1].multiply(gridJ[0], grid2ImJ[0]);
-    s[1][1].multiply(gridJ[1], grid2ImJ[1]);
-
-    IndexType index, index_projected;
-    IndexRangeType ir;
-    ir.setRange(0, capd::jaco::strong, n, capd::jaco::weak);
-
-    inverseExtendedTransform(s[0][0], t[0][0]);
-    inverseExtendedTransform(s[1][0], t[1][0]);
-    inverseExtendedTransform(s[0][1], t[0][1]);
-    inverseExtendedTransform(s[1][1], t[1][1]);
-    //attention: all t's above have one component
-
-    for(index = this->firstModeIndex(ir); !index.limitReached(ir); index.inc(ir)) {
-      //t[0][index.l].set(index, index[0]*t[0][index.l][index]);
-      //t[1][index.l].set(index, index[1]*t[1][index.l][index]);
-      index_projected = index;
-      index_projected.l = 0;
-      r[index] = t[0][index.l][index_projected] + t[1][index.l][index_projected];
-    }
-  } */
-
   /**
-   * calculates the scalar product
-   * (U\cdot\nabla)V
-   *
-   * grid stores the Fourier transform of U (two component vector, as U has two components)
-   *
-   * grid.gradient[0] stores the Fourier transform of \nabla V_1 (also two component vector)
-   *
-   * grid.gradient[1] stores the Fourier transform of \nabla V_2 (also two component vector)
-   */
-  inline void scalarProduct(const DFTGridType& grid, ModesContainer2DType& r){
-    s[0][0].multiply(grid[0], grid.gradient[0][0]);
-    s[1][0].multiply(grid[1], grid.gradient[0][1]);
-    s[0][1].multiply(grid[0], grid.gradient[1][0]);
-    s[1][1].multiply(grid[1], grid.gradient[1][1]);
-
-    IndexType index, index_projected;
-    IndexRangeType ir;
-    ir.setRange(0, capd::jaco::strong, n, capd::jaco::weak);
-
-    inverseExtendedTransform(s[0][0], t[0][0]);
-    inverseExtendedTransform(s[1][0], t[1][0]);
-    inverseExtendedTransform(s[0][1], t[0][1]);
-    inverseExtendedTransform(s[1][1], t[1][1]);
-    //attention: all t's above have one component
-
-    for(index = this->firstModeIndex(ir); !index.limitReached(ir); index.inc(ir)) {
-      //t[0][index.l].set(index, index[0]*t[0][index.l][index]);
-      //t[1][index.l].set(index, index[1]*t[1][index.l][index]);
-      index_projected = index;
-      index_projected.l = 0;
-      r[index] = t[0][index.l][index_projected] + t[1][index.l][index_projected];
-    }
-  }
-
-
+     * calculates the scalar product
+     * (U\cdot\nabla)V
+     *
+     * grid1 stores the Fourier transform of U (two component vector, as U has two components)
+     *
+     * grid2.gradient[0] stores the Fourier transform of \nabla V_1 (also two component vector)
+     *
+     * grid2.gradient[1] stores the Fourier transform of \nabla V_2 (also two component vector)
+     */
   inline void scalarProduct(const DFTGridType& grid, DFTGridType& r){
     s[0][0].multiply(grid[0], grid.gradient[0][0]);
     s[1][0].multiply(grid[1], grid.gradient[0][1]);
@@ -1249,6 +1197,16 @@ public:
     r[1] = s[0][1] + s[1][1];
   }
 
+  /**
+     * calculates the scalar product
+     * (U\cdot\nabla)V
+     *
+     * grid1 stores the Fourier transform of U (two component vector, as U has two components)
+     *
+     * grid2.gradient[0] stores the Fourier transform of \nabla V_1 (also two component vector)
+     *
+     * grid2.gradient[1] stores the Fourier transform of \nabla V_2 (also two component vector)
+     */
   inline void scalarProduct(const DFTGridType& grid1, const DFTGridType& grid2, DFTGridType& r){
     s[0][0].multiply(grid1[0], grid2.gradient[0][0]);
     s[1][0].multiply(grid1[1], grid2.gradient[0][1]);
@@ -1257,44 +1215,6 @@ public:
 
     r[0] = s[0][0] + s[1][0];
     r[1] = s[0][1] + s[1][1];
-  }
-
-
-  /**
-   * calculates the scalar product
-   * (U\cdot\nabla)V
-   *
-   * grid1 stores the Fourier transform of U (two component vector, as U has two components)
-   *
-   * grid2.gradient[0] stores the Fourier transform of \nabla V_1 (also two component vector)
-   *
-   * grid2.gradient[1] stores the Fourier transform of \nabla V_2 (also two component vector)
-   */
-  inline void scalarProduct(const DFTGridType& grid1, const DFTGridType& grid2, ModesContainer2DType& r){
-    s[0][0].multiply(grid1[0], grid2.gradient[0][0]);
-    s[1][0].multiply(grid1[1], grid2.gradient[0][1]);
-    s[0][1].multiply(grid1[0], grid2.gradient[1][0]);
-    s[1][1].multiply(grid1[1], grid2.gradient[1][1]);
-
-    IndexType index, index_projected;
-    IndexRangeType ir;
-    ir.setRange(0, capd::jaco::strong, n, capd::jaco::weak);
-
-    inverseExtendedTransform(s[0][0], t[0][0]);
-    inverseExtendedTransform(s[1][0], t[1][0]);
-    inverseExtendedTransform(s[0][1], t[0][1]);
-    inverseExtendedTransform(s[1][1], t[1][1]);
-    //attention: all t's above have one component
-
-    for(index = this->firstModeIndex(ir); !index.limitReached(ir); index.inc(ir)) {
-      //t[0][index.l].set(index, index[0]*t[0][index.l][index]);
-      //t[1][index.l].set(index, index[1]*t[1][index.l][index]);
-      index_projected = index;
-      index_projected.l = 0;
-      r[index] = t[0][index.l][index_projected] + t[1][index.l][index_projected];
-    }
-
-
   }
 
 
@@ -1358,8 +1278,9 @@ public:
       //calculate scalar products
       ScalarType scpr = i[0] * in[i] + i[1] * in[i.nextComponent()];
       IntervalType norm = i.squareEuclNorm();
-      projected[i] = in[i] - (i[0] / norm) * scpr;
-      projected[i.nextComponent()] = in[i.nextComponent()] - (i[1] / norm) * scpr;
+
+      projected.set(i, in[i] - (i[0] / norm) * scpr);
+      projected.set(i.nextComponent(), in[i.nextComponent()] - (i[1] / norm) * scpr);
 
     }
   }

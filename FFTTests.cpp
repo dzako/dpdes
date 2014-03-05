@@ -250,20 +250,23 @@ void fft2dTwoComponentTest(){
 
   FFT2DTwoComponents fft2d(n, m, Interval::pi());
 
-  FFT2DTwoComponents::DFTGridType s(m), ru(m), rv(m), rGrad1(m), rGrad2(m);
+  FFT2DTwoComponents::DFTGridType s(m), ru(m), rv(m), rGrad1(m), rGrad2(m), scp(m);
 
   ComplexVector temp(m), tempR(m), pad(m);
 
-  Modes2DContainerTwoComponents u(n, d), v(n, d), r(n, d), c(n, d), grad1(n, d), grad2(n, d);
+  Modes2DContainerTwoComponents u(n, d), v(n, d), r(n, d), c(n, d), grad1(n, d), grad2(n, d), projectedu(n, d);
   Index2DTwoComponents index1, index2, ind, ind_2;
   index1[0] = 1;
   index1[1] = 0;
+  index1.l = 1;
+  u.set(index1, ComplexScalar(0, -1));
 
-  u.set(index1, ComplexScalar(-1, -1));
+  index2[0] = 0;
+  index2[1] = 1;
+  index2.l = 0;
+  u.set(index2, ComplexScalar(0, -1));
+  //these are easier test values
 
-  index2[0] = -1;
-  index2[1] = 0;
-  u.set(index2, ComplexScalar(1, 1));
 
   int i,j;
   Interval diam = Interval(-1e-5, 1e-5);
@@ -273,31 +276,18 @@ void fft2dTwoComponentTest(){
   for(ind = fft2d.firstModeIndex(range); !ind.limitReached(range); ind.inc(range)){
     u.set(ind, ComplexScalar(double(rand())/RAND_MAX + diam, double(rand())/RAND_MAX + diam));
   }
-  for(ind = fft2d.firstModeIndex(range), ind.l = 0; !ind.limitReached(range); ind.inc(range, true)){
-    grad1.set(ind,  ind[0] * (ComplexScalar(0, 1.) * u[ind])); //partial u_1 / partial x_1
-    ind_2 = ind;
-    ind_2.l = 1;
-    grad1.set(ind_2,  ind[1] * (ComplexScalar(0, 1.) * u[ind])); //partial u_1 / partial x_2
 
-  }
-
-  for(ind = fft2d.firstModeIndex(range), ind.l = 1; !ind.limitReached(range); ind.inc(range, true)){
-    grad2.set(ind,   ind[1] * (ComplexScalar(0, 1.) * u[ind])); //partial u_1 / partial x_1
-    ind_2 = ind;
-    ind_2.l = 0;
-    grad2.set(ind_2, ind[0] * (ComplexScalar(0, 1.) * u[ind])); //partial u_1 / partial x_2
-
-  }
+  fft2d.CalculateGradients(u, grad1, grad2);
 
   clock_t start, end;
 
-  fft2d.extendedTransform(u, ru);
-  fft2d.extendedTransform(grad1, rGrad1);
-  fft2d.extendedTransform(grad2, rGrad2);
+  fft2d.fastTransform(u, ru); //calculates transforms of Pu, and its gradients
+  fft2d.scalarProduct(ru, scp);
+  fft2d.inverseExtendedTransform(scp, r, 0);
+  fft2d.inverseExtendedTransform(scp, r, 1);
+  fft2d.project(u, projectedu);
 
-  fft2d.scalarProduct(ru, rGrad1, rGrad2, r);
-
-  c = calculateTwoComponentProduct(n, u, grad1, grad2);
+  c = calculateTwoComponentProduct(n, projectedu, grad1, grad2);
 
   generalDebug << "r:\n" << r ;
   generalDebug << "c:\n" << c ;
