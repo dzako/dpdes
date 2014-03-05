@@ -1080,10 +1080,6 @@ public:
  * Taylor coefficients), second template parameter (ComplexScalarT) is a class representing a complex number (needed in
  * order to construct the complex matrices W and hatW - representing the discrete transform and inverse transform.
  *
- * TODO: this is a REAL DATA only transform, should pad by zero the complex plane result. There are possible simplifications,
- * optimizations in the transform (do not calculate negative and positive indices? and so on).
- * 
- * TODO: 23.05.12 stack dimensions and capd::Matrix dimensions should be provided accordingly
  */
 template< class ScalarT, class ComplexScalarT, int N, int M,
   class ModesContainerT = capd::jaco::ComplexPolyBdJetOptimized<typename ComplexScalarT::ScalarType, ScalarT, capd::jaco::Index2DTwoComponents, 2*2*2*N*N> >
@@ -1116,6 +1112,7 @@ public:
   FFT1DType fft1d;
   DFT1DGridType rProjection;
   ModesContainer1DType mc1d;
+  ModesContainer2DType projected, grad1, grad2;
   Grid1DOfModesContainer1DType gridOfModes;
   ModesContainer1DOfGrid1DType modesContainerOfGrid;
   capd::vectalg::Matrix<DFT2DGridType, 0, 0> s; ///< for temporary results
@@ -1124,7 +1121,7 @@ public:
   FFT2D(){}
   
   FFT2D(int n_, int m_, IntervalType pi_) : n(n_), m(m_), SubspaceType(n_, 2 * n_), fft1d(n_, m_, pi_), rProjection(m_), mc1d(n_),
-      gridOfModes(m_, false), modesContainerOfGrid(n_), s(2, 2, false), t(2, 2, false){
+      gridOfModes(m_, false), modesContainerOfGrid(n_), s(2, 2, false), t(2, 2, false), projected(n_), grad1(n_), grad2(n_){
     int i, j;
     for(i=0; i < m; ++i)
       gridOfModes[i] = ModesContainer1DType(n);
@@ -1169,27 +1166,19 @@ public:
     }
   }
 
-  /**calculates the scalar product
-   * /f[
-   *  \sum_{k_1\in\text{a Projection}}{ (a_{k_1}^1, a_{k_1}^2)\cdot b_{k-k_1}}
-   * /f]
-   *
-   * where (a_{k_1}^1, a_{k_1}^2) are modes of a vector function, and b_{k-k_1} are modes of a scalar function (e.g.
-   * gradient of a
-   */
+  inline void setProjection(const ModesContainer1DType& mc1d, ModesContainer2DType& mc2d, int fixedSecondComponent, int component) const{
+    int k_1;
+    Index2DType index;
+    index[1] = fixedSecondComponent;
+    for(k_1 = -n; k_1 <= n; ++k_1){
+      index[0] = k_1;
+      index.l = component;
+      mc2d.set(index, mc1d[Index1D(k_1)]);
+    }
+  }
 
 
-  /**
-   * calculates the scalar product
-   * (U\cdot\nabla)V
-   *
-   * gridJ is the Fourier transform of U (two component vector, as U has two components)
-   *
-   * grid1ImJ is the Fourier transform of \nabla V_1 (also two component vector)
-   *
-   * grid2ImJ is the Fourier transform of \nabla V_2 (also two component vector)
-   */
-  inline void scalarProduct(const DFTGridType& gridJ, const DFTGridType& grid1ImJ, const DFTGridType& grid2ImJ, ModesContainer2DType& r){
+/*  inline void scalarProduct(const DFTGridType& gridJ, const DFTGridType& grid1ImJ, const DFTGridType& grid2ImJ, ModesContainer2DType& r){
     s[0][0].multiply(gridJ[0], grid1ImJ[0]);
     s[1][0].multiply(gridJ[1], grid1ImJ[1]);
     s[0][1].multiply(gridJ[0], grid2ImJ[0]);
@@ -1212,104 +1201,111 @@ public:
       index_projected.l = 0;
       r[index] = t[0][index.l][index_projected] + t[1][index.l][index_projected];
     }
+  } */
 
-  }
-
-  //TODO: 12.02.14 nieprzetestowane, nie wiem czy w ogole dziala dobrze
-  /**calculates the scalar product
-   * /f[
-   *  \sum_{k_1\in\text{a Projection}}{(k, a_{k_1})\cdot a_{k-k_1}}
-   * /f]
-   * 
-   * This version somehow detects symmetries , i.e. j == imj , in this case there is no need of calculating s[0][1] 
-   * 
+  /**
+   * calculates the scalar product
+   * (U\cdot\nabla)V
+   *
+   * grid stores the Fourier transform of U (two component vector, as U has two components)
+   *
+   * grid.gradient[0] stores the Fourier transform of \nabla V_1 (also two component vector)
+   *
+   * grid.gradient[1] stores the Fourier transform of \nabla V_2 (also two component vector)
    */
-/*  inline void scalarProduct(int j, int imj, const DFTGridType& gridJ, const DFTGridType& gridImJ, ModesContainer2DType& r){
-    s[0][0].multiply(gridJ[0], gridImJ[0]);
-    s[1][0].multiply(gridJ[1], gridImJ[0]);
-    if(j != imj){
-      s[0][1].multiply(gridJ[0], gridImJ[1]);
-    }
-    s[1][1].multiply(gridJ[1], gridImJ[1]);
+  inline void scalarProduct(const DFTGridType& grid, ModesContainer2DType& r){
+    s[0][0].multiply(grid[0], grid.gradient[0][0]);
+    s[1][0].multiply(grid[1], grid.gradient[0][1]);
+    s[0][1].multiply(grid[0], grid.gradient[1][0]);
+    s[1][1].multiply(grid[1], grid.gradient[1][1]);
 
-    IndexType index;
+    IndexType index, index_projected;
     IndexRangeType ir;
     ir.setRange(0, capd::jaco::strong, n, capd::jaco::weak);
 
     inverseExtendedTransform(s[0][0], t[0][0]);
     inverseExtendedTransform(s[1][0], t[1][0]);
-    if(j != imj){
-      inverseExtendedTransform(s[0][1], t[0][1]);
-    }else{
-      t[0][1] = t[1][0];
-    }
+    inverseExtendedTransform(s[0][1], t[0][1]);
     inverseExtendedTransform(s[1][1], t[1][1]);
+    //attention: all t's above have one component
 
-    int l;
-    if(j != imj)
-      for(index = firstModeIndex(ir); !index.limitReached(ir); index.inc(ir)) {
-        l = index.l;
-
-        t[l][l].set(index, 2 * index[l] * t[l][l][index]);
-
-        t[(l + 1) % 2][l].set(index, index[(l + 1) % 2] * t[(l + 1) % 2][l][index]);
-
-        t[l][(l + 1) % 2].set(index, index[(l + 1) % 2] * t[l][(l + 1) % 2][index]);
-
-        r.set(index, t[l][l][index] + t[(l + 1) % 2][l][index] + t[l][(l + 1) % 2][index]);
-      }
-    else
-      for(index = firstModeIndex(ir); !index.limitReached(ir); index.inc(ir)) {
-        t[0][index.l].set(index, index[0]*t[0][index.l][index]);
-        t[1][index.l].set(index, index[1]*t[1][index.l][index]);
-        r.set(index, t[0][index.l][index] + t[1][index.l][index]);
-      }
-
-  }
-*/
-
-  ///TODO: 12.02.14 to chyba trzeba usunac, bo wprowadza kontuzje z extended transform, poza tym nie wiem co by to mialo
-  ///robic liczyc transformate tylko piwerszego componentu, ale po co?
-  /**Write what are differences with extendedTransform. (it calculates only one coordinate)
-   *
-   */
-/*  inline void transform(const ModesContainer2DType& modes, DFT2DGridType& r){
-    int k_2, j_1;
-
-    ///first, calculate N independent FFTs, one for each fixed second index component
-    for(k_2 = 0; k_2 <= n; ++k_2){
-      takeProjection(modes, mc1d, k_2, 0);
-      //IMPORTANT: here we have to use extended version, because a 1D projection of modes {a_k} (obtained by fixing the second component)
-      //from a 2D set of modes may not satisfy the condition a_{-k}=\overline{a_k}.
-      fft1d.extendedTransform(mc1d, rProjection);
-
-      //We want the result to be saved in Grid1D, representing a DFT values calculated for all of the discrete points, and for all
-      //possible values of the modes index second component (which was fixed).
-
-      for(j_1=0; j_1 < m; ++j_1){
-        gridOfModes[j_1].set(Index1D(k_2), rProjection[j_1]);
-      }
+    for(index = this->firstModeIndex(ir); !index.limitReached(ir); index.inc(ir)) {
+      //t[0][index.l].set(index, index[0]*t[0][index.l][index]);
+      //t[1][index.l].set(index, index[1]*t[1][index.l][index]);
+      index_projected = index;
+      index_projected.l = 0;
+      r[index] = t[0][index.l][index_projected] + t[1][index.l][index_projected];
     }
-
-    ///second, calculate M independent FFTs, one for each j_1 discrete point index that were calculated in the previous step
-    for(j_1=0; j_1 < m; ++j_1){
-      //IMPORTANT: we know that result is going to be real, therefore we use ''fast version'' which avoids some calculations.
-      fft1d.fastTransform(gridOfModes[j_1], rProjection);
-
-      r[j_1]=rProjection; ///r doesn't have more components therefore r[j_1] not r[0][j_1] or r[1][j_1]
-    }
-
   }
-*/
+
+
+  inline void scalarProduct(const DFTGridType& grid, DFTGridType& r){
+    s[0][0].multiply(grid[0], grid.gradient[0][0]);
+    s[1][0].multiply(grid[1], grid.gradient[0][1]);
+    s[0][1].multiply(grid[0], grid.gradient[1][0]);
+    s[1][1].multiply(grid[1], grid.gradient[1][1]);
+
+    r[0] = s[0][0] + s[1][0];
+    r[1] = s[0][1] + s[1][1];
+  }
+
+  inline void scalarProduct(const DFTGridType& grid1, const DFTGridType& grid2, DFTGridType& r){
+    s[0][0].multiply(grid1[0], grid2.gradient[0][0]);
+    s[1][0].multiply(grid1[1], grid2.gradient[0][1]);
+    s[0][1].multiply(grid1[0], grid2.gradient[1][0]);
+    s[1][1].multiply(grid1[1], grid2.gradient[1][1]);
+
+    r[0] = s[0][0] + s[1][0];
+    r[1] = s[0][1] + s[1][1];
+  }
+
 
   /**
+   * calculates the scalar product
+   * (U\cdot\nabla)V
    *
+   * grid1 stores the Fourier transform of U (two component vector, as U has two components)
+   *
+   * grid2.gradient[0] stores the Fourier transform of \nabla V_1 (also two component vector)
+   *
+   * grid2.gradient[1] stores the Fourier transform of \nabla V_2 (also two component vector)
    */
-  inline void extendedTransform(const ModesContainer2DType& modes, DFTGridType& r){
+  inline void scalarProduct(const DFTGridType& grid1, const DFTGridType& grid2, ModesContainer2DType& r){
+    s[0][0].multiply(grid1[0], grid2.gradient[0][0]);
+    s[1][0].multiply(grid1[1], grid2.gradient[0][1]);
+    s[0][1].multiply(grid1[0], grid2.gradient[1][0]);
+    s[1][1].multiply(grid1[1], grid2.gradient[1][1]);
+
+    IndexType index, index_projected;
+    IndexRangeType ir;
+    ir.setRange(0, capd::jaco::strong, n, capd::jaco::weak);
+
+    inverseExtendedTransform(s[0][0], t[0][0]);
+    inverseExtendedTransform(s[1][0], t[1][0]);
+    inverseExtendedTransform(s[0][1], t[0][1]);
+    inverseExtendedTransform(s[1][1], t[1][1]);
+    //attention: all t's above have one component
+
+    for(index = this->firstModeIndex(ir); !index.limitReached(ir); index.inc(ir)) {
+      //t[0][index.l].set(index, index[0]*t[0][index.l][index]);
+      //t[1][index.l].set(index, index[1]*t[1][index.l][index]);
+      index_projected = index;
+      index_projected.l = 0;
+      r[index] = t[0][index.l][index_projected] + t[1][index.l][index_projected];
+    }
+
+
+  }
+
+
+  /**
+   * More basic version of the transform function. The component which is being transformed is provided as the input.
+   */
+  inline void extendedTransform(const ModesContainer2DType& modes, DFT2DGridType& r, int component){
     int k_2, j_1;
     ///first, calculate N independent FFTs, one for each fixed second index component
     for(k_2 = 0; k_2 <= n; ++k_2){
-      takeProjection(modes, mc1d, k_2, 0);
+      takeProjection(modes, mc1d, k_2, component);
       //IMPORTANT: here we have to use extended version, because a 1D projection of modes {a_k} (obtained by fixing the second component)
       //from a 2D set of modes may not satisfy the condition a_{-k}=\overline{a_k}.
       fft1d.extendedTransform(mc1d, rProjection);
@@ -1326,36 +1322,64 @@ public:
       //IMPORTANT: we know that result is going to be real, therefore we use ''fast version'' which avoids some calculations.
       fft1d.fastTransform(gridOfModes[j_1], rProjection);
 
-      r[0][j_1]=rProjection;
+      r[j_1]=rProjection;
     }
-
-    ///first, calculate N independent FFTs, one for each fixed second index component
-    for(k_2 = 0; k_2 <= n; ++k_2){
-      takeProjection(modes, mc1d, k_2, 1);
-      //IMPORTANT: here we have to use extended version, because a 1D projection of modes {a_k} (obtained by fixing the second component)
-      //from a 2D set of modes may not satisfy the condition a_{-k}=\overline{a_k}.
-      fft1d.extendedTransform(mc1d, rProjection);
-
-      //We want the result to be saved in Grid1D, representing a DFT values calculated for all of the discrete points, and for all
-      //possible values of the modes index second component (which was fixed).
-      for(j_1=0; j_1 < m; ++j_1){
-        gridOfModes[j_1].set(Index1D(k_2), rProjection[j_1]);// we have to set the conjugates also (unnecessary to calculate them)
-      }
-    }
-
-    ///second, calculate M independent FFTs, one for each j_1 discrete point index that was calculated in the previous step
-    for(j_1=0; j_1 < m; ++j_1){
-      //IMPORTANT: we know that result is going to be real, therefore we use ''fast version'' which avoids some calculations.
-      fft1d.fastTransform(gridOfModes[j_1], rProjection);
-
-      r[1][j_1]=rProjection;
-    }
-
   }
 
+  inline void extendedTransform(const ModesContainer2DType& modes, DFTGridType& r){
+    extendedTransform(modes, r[0], 0);
+    extendedTransform(modes, r[1], 1);
+  }
 
+  inline void CalculateGradients(const ModesContainer2DType& u, ModesContainer2DType& grad1, ModesContainer2DType& grad2){
+    IndexRangeType ir;
+    ir.setRange(0, capd::jaco::strong, n, capd::jaco::weak);
+    for(IndexType ind = this->firstModeIndex(ir), ind_2; !ind.limitReached(ir); ind.inc(ir)){
+      if(ind.l == 0){
+        grad1.set(ind,  ind[0] * (ComplexScalarType::i() * u[ind])); //partial u_1 / partial x_1
+        ind_2 = ind;
+        ind_2.l = 1;
+        grad1.set(ind_2,  ind[1] * (ComplexScalarType::i() * u[ind])); //partial u_1 / partial x_2
+      }else{
+        grad2.set(ind,   ind[1] * (ComplexScalarType::i() * u[ind])); //partial u_1 / partial x_1
+        ind_2 = ind;
+        ind_2.l = 0;
+        grad2.set(ind_2, ind[0] * (ComplexScalarType::i() * u[ind])); //partial u_1 / partial x_2
+      }
+    }
+  }
+
+  inline void project(const ModesContainer2DType& in, ModesContainer2DType& projected){
+    IndexRangeType range;
+    range.setRange(0, capd::jaco::strong, n, capd::jaco::weak);
+    IndexType i, i2;
+
+    for(i = this->firstModeIndex(range), i.l = 0; !i.limitReached(range); i.inc(range, true)){
+      //calculate scalar products
+      ScalarType scpr = i[0] * in[i] + i[1] * in[i.nextComponent()];
+      IntervalType norm = i.squareEuclNorm();
+      projected[i] = in[i] - (i[0] / norm) * scpr;
+      projected[i.nextComponent()] = in[i.nextComponent()] - (i[1] / norm) * scpr;
+
+    }
+  }
+
+  /* This function is the extended version from the one-dimensional transform. It calculates transform of the
+   * function components stored in modes, and all gradients (these are stored in r.gradient).
+   */
   inline void fastTransform(const ModesContainer2DType& modes, DFTGridType& r){
-    extendedTransform(modes, r);
+    CalculateGradients(modes, grad1, grad2);
+
+    project(modes, projected);
+    extendedTransform(projected, r[0], 0);
+    extendedTransform(projected, r[1], 1);
+
+    extendedTransform(grad1, r.gradient[0][0], 0);
+    extendedTransform(grad1, r.gradient[0][1], 1);
+
+    extendedTransform(grad2, r.gradient[1][0], 0);
+    extendedTransform(grad2, r.gradient[1][1], 1);
+
   }
 
   /**
@@ -1383,7 +1407,33 @@ public:
     }
   }
 
-  ///TODO: temporary functions, for debugging
+
+  /**
+   *
+   * @param s two dimensional , two component DFT grid
+   * @param r values of modes after inverse transform (component parameter determines which direction [in 2D case either 0 or 1])
+   *          is being calculated)
+   */
+  inline void inverseExtendedTransform(const DFTGridType& s, ModesContainerType& r, int component){
+    int j_1, k_2;
+
+    for(j_1=0; j_1 < m; ++j_1){
+      //IMPORTANT: we know that data is real, therefore we use ''fast version'' which avoids some calculations.
+      fft1d.fastInverseTransform(s[component][j_1], mc1d);
+//      fft1d.inverseExtendedTransform(s[j_1], mc1d);
+      for(k_2 = -n; k_2 <= n; ++k_2){
+        modesContainerOfGrid[Index1D(k_2)][j_1] = mc1d[Index1D(k_2)];
+      }
+    }
+    for(k_2 = 0; k_2 <= n; ++k_2){
+      //IMPORTANT: here we cannot use ''fast version'', because we are calculating a 1D modes projection {a_k} (obtained by
+      //fixing the second component) from a 2D set of modes may not satisfy the condition a_{-k}=\overline{a_k}.
+      fft1d.inverseExtendedTransform(modesContainerOfGrid[Index1D(k_2)], mc1d);
+      setProjection(mc1d, r, k_2, component);
+    }
+  }
+
+
   void printModes(const ModesContainerType& mc) const{
     IndexType index;
     IndexRangeType ir;

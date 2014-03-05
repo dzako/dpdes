@@ -228,8 +228,8 @@ public:
 //  }
 
   friend std::ostream& operator<<(std::ostream& out, const ComplexScalar& c){
-    //out << "(" << fadbad::val(c.re.val()) << "," << fadbad::val(c.im.val()) << ")"; //TODO: for debug purpose
-    out << "(" << c.re << "," << c.im << ") diam (" << diam(c.re) << ", " << diam(c.im) << ")";
+    //out << "(" << c.re << "," << c.im << ") diam (" << diam(c.re) << ", " << diam(c.im) << ")";
+    out << "( " << c.im << " )";
     return out;
   }
 

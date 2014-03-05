@@ -146,7 +146,7 @@ public:
     ScalarT::switchToComplexValued();
     ScalarT::switchToGlobalOptimization();              
     calculateGrid2(0);       
-    generalDebug2 << "grid["<<0<<"] ("<<grids[0].subspaceType<<", "<<grids[0].solutionType<<")="<<grids[0]<<"\n";
+    generalDebug2 << "grid["<<0<<"] ("<<", "<<")="<<grids[0]<<"\n";
     generalDebug2 << "modes["<<0<<"] ("<<modes[0].subspaceType<<", "<<modes[0].solutionType<<")="<<modes[0]<<"\n";
     for(i=0; i < order; ++i){       
       rightHandSide( i, grids, modes, rhsSeries, rhsFunctionSpace, (i < order - 1 ? true : false));      
@@ -156,7 +156,7 @@ public:
       modes[i+1] = rhsSeries;
       generalDebug2 << "modes["<<i+1<<"] ("<<modes[i+1].subspaceType<<", "<<modes[i+1].solutionType<<")="<<modes[i+1]<<"\n";
       grids[i+1] = rhsFunctionSpace;
-      generalDebug2 << "grid["<<i+1<<"] ("<<grids[i+1].subspaceType<<", "<<grids[i+1].solutionType<<")="<<grids[i+1]<<"\n";
+      generalDebug2 << "grid["<<i+1<<"] ("<<")="<<grids[i+1]<<"\n";
     }    
     if( changeStepAdaptively ){
       step = computeNextTimeStep();

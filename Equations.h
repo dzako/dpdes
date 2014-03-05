@@ -2663,7 +2663,6 @@ public:
   }
 
   inline void CalculateGradients(const ModesContainerType& u, ModesContainerType& grad1, ModesContainerType& grad2){
-
     for(IndexType ind = fft1.firstModeIndex(ir_m), ind_2; !ind.limitReached(ir_m); ind.inc(ir_m)){
       if(ind.l == 0){
         grad1.set(ind,  ind[0] * (ComplexScalarType::i() * u[ind])); //partial u_1 / partial x_1
@@ -2677,7 +2676,6 @@ public:
         grad2.set(ind_2, ind[0] * (ComplexScalarType::i() * u[ind])); //partial u_1 / partial x_2
       }
     }
-
   }
 
   inline void project(const ModesContainerType& in, ModesContainerType& projected){
@@ -2700,16 +2698,10 @@ public:
     if(!in.infiniteDimensional){
       if(ScalarT::initialConditionIsRealValued())
         ScalarT::switchToComplexValued();
-      CalculateGradients(in, tmc, tmc2);
-      project(in, tmc3); //project on the subspace orthogonal to k
-      //std::cout << "projected=\n" << tmc3 << "\n";
-      fft1.extendedTransform(tmc3, tg1); //calculate dft of the projected part
-      //std::cout << "tg1=\n" << tg1 << "\n";
-      fft1.extendedTransform(tmc, tg1_2);
-      //std::cout << "tg1_2=\n" << tg1_2 << "\n";
-      fft1.extendedTransform(tmc2, tg1_3);
-      //std::cout << "tg1_3=\n" << tg1_3 << "\n";
-      fft1.scalarProduct( tg1, tg1_2, tg1_3, out );
+      fft1.fastTransform(in, tg1); //calculate dft of the projected part
+      fft1.scalarProduct( tg1, tg1_2 );
+      fft1.inverseExtendedTransform(tg1_2, out, 0);
+      fft1.inverseExtendedTransform(tg1_2, out, 1);
       if(ScalarT::initialConditionIsRealValued())
         ScalarT::switchToRealValued();
     }else{
@@ -2717,6 +2709,46 @@ public:
       throw std::runtime_error("DPDE2HighDim.CalculateNonlinearTermUsingFFT is implemented only for finite dimension.");
     }
 
+  }
+
+  inline void rightHandSide(int i, const GridsContainerType& grids, const ModesContainerContainerType& modes,
+                              ModesContainerType& rhsSeries, DFTGridType& rhsFunctionSpace, bool calculateRhsFunctionSpace = true){
+    int j;
+    //if the solution is real valued and even/odd then there are a lot of zeros in the jets, and the additions/multiplication by
+    //zeros should be avoided
+    //if(ScalarT::initialConditionIsRealValued()) ///optimizing thing
+    //  ScalarT::switchToRealValuedL2(); //if solution is real valued then imaginary part of jets is zero
+    for(j=0; j <= i; ++j){
+      ///remark: there is already multiplication by k inside this procedure
+      ///< calculates \sum_{k_1\in a Projection}{(k, a_k)\cdot a_{k-k_1}}
+      fft1.scalarProduct(grids[j], grids[i - j], sdft);
+      if(j == 0) rhs = sdft; //this is needed in order to s have the same DPDEContainer
+      else rhs += sdft;
+    }
+    fft1.inverseExtendedTransform(rhs, rhsSeries, 0);
+    fft1.inverseExtendedTransform(rhs, rhsSeries, 1);
+
+    generalDebug2 << "rhsSeries:\n" << rhsSeries << "\n";
+    if(ScalarT::initialConditionIsRealValued())
+      ScalarT::switchToRealValued();
+    IndexType index;
+    for(index = this->firstModeIndex(ir_m); !index.limitReached(ir_m); index.inc(ir_m)) {
+      //here we have minus - because rhsSeries = Pu\cdot\nabla u
+      rhsSeries.set(index, rhsSeries[index] + this->lambda_k(index) * modes[i][index]);
+    }
+    if(i == 0){ //vector field is calculated, and thus y_c and forcing have to be added
+      rhsSeries += yc;
+      rhsSeries += forcing;
+    }
+    rhsSeries *= RealType(1) / RealType(i+1);
+    //we switch back to complex valued, because the FFT is complex
+    ScalarT::switchToComplexValued();
+    if(calculateRhsFunctionSpace) fft1.fastTransform(rhsSeries, rhsFunctionSpace);
+  }
+
+  inline void rightHandSide(int i, const ModesContainerContainerType& modes, ModesContainerType& rhsSeries){
+    std::cerr << "DPDE2HighDim.rightHandSide is not implemented.";
+    throw std::runtime_error("DPDE2HighDim.rightHandSide is not implemented.");
   }
 
 
@@ -2754,6 +2786,12 @@ public:
 
     out += forcing; ///add forcing
   }
+
+  inline void calculateGrids(int i, const ModesContainerContainerType& modes, GridsContainerType& grids){
+    std::cerr << "DPDE2HighDim.calculateGrids is  not implemented for DPDE2HighDim.";
+    throw std::runtime_error("DPDE2HighDim.calculateGrids is not implemented for DPDE2HighDim.");
+  }
+
 
 };
 

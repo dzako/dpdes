@@ -267,6 +267,14 @@ public:
     return *this;
   }
 
+  inline DFT2DGrid& operator+=(const DFT2DGrid& s){
+    int i;
+    for(i=0; i < m; ++i){
+      grid[i] += s[i];
+    }
+    return *this;
+  }
+
   inline DFT2DGrid& multiplyAndDivide(const DFT2DGrid& dft1, const DFT2DGrid& dft2){
     DPDEContainer::multiply(dft1, dft2);
     
@@ -348,22 +356,33 @@ public:
 
 };
 
-/**A vector of grids.
+/**This class is used for storing vectors of DFTGrids.
+ * It is composed of:
+ * * the vector for function components,
+ * * the vector for all of the gradients.
+ *
  */
 template<class DFTGridT, int D>
 class ComponentGrid{
 public:
   typedef DFTGridT DFTGridType;
   typedef capd::vectalg::Vector<DFTGridType, 0> GridVectorType;
+  typedef capd::vectalg::Matrix<DFTGridType, 0, 0> GridMatrixType;
 
   GridVectorType v;
+  GridMatrixType gradient;
 
   inline ComponentGrid() { }
 
-  inline ComponentGrid(int m) : v(D){
-    int i;
+  inline ComponentGrid(int m) : v(D), gradient(D, D){
+    int i, j;
     for(i=0; i < D; ++i)
       v[i] = DFTGridType(m);
+
+    for(i=0; i < D; ++i)
+      for(j=0; j < D; ++j)
+        gradient[i][j] = DFTGridType(m);
+
   }
 
   inline const DFTGridType& operator[](int i) const{
@@ -374,12 +393,22 @@ public:
     return v[i];
   }
 
+  inline ComponentGrid& operator+=(const ComponentGrid& s){
+    int i, j;
+    for(i=0; i < D; ++i){
+      v[i] += s[i];
+    }
+
+    return *this;
+  }
+
   friend std::ostream& operator<<(std::ostream& out, const ComponentGrid& c){
     int i;
     for(i=0; i < D; ++i)
       out << "component #" << i << ":\n" << c[i] << "\n";
     return out;
   }
+
 };
 
 template< class IntervalT, class ScalarT, int M>
@@ -408,6 +437,7 @@ inline const DFT2DGrid<IntervalT, ScalarT, M> operator+(const DFT2DGrid<Interval
 
   return r;
 }
+
 
 
 }

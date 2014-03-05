@@ -149,7 +149,7 @@ public:
     return *this;
   }
 
-  inline ComplexPolyBdJetOptimized& operator*=(double d){
+  /*inline ComplexPolyBdJetOptimized& operator*=(double d){
     iu = m_upperHalfspace.begin(),
     il = m_lowerHalfspace.begin();
     while(iu != m_upperHalfspace.end()){
@@ -158,18 +158,7 @@ public:
       iu++; il++;
     }
     return *this;
-  }
-
-  inline ComplexPolyBdJetOptimized& operator*=(long double d){
-    iu = m_upperHalfspace.begin(),
-    il = m_lowerHalfspace.begin();
-    while(iu != m_upperHalfspace.end()){
-      *iu = d * (*iu);
-      *il = d * (*il);
-      iu++; il++;
-    }
-    return *this;
-  }
+  }*/
 
   inline ComplexPolyBdJetOptimized& operator+=(const RealVectorType& v){    
     IndexType index;    
