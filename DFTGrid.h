@@ -283,7 +283,8 @@ public:
     int i,j;
     for(i=0; i < m; ++i)
       for(j=0; j < m; ++j){
-        grid[i][j] = d * dft1[i][j] * dft2[i][j];
+        grid[i][j] = d * dft1[i][j];
+        grid[i][j] *= dft2[i][j];
       }
     return *this;
   }

@@ -67,6 +67,10 @@ typedef typename FFT2DTwoComponents::ModesContainerType Modes2DContainerTwoCompo
 typedef Modes2DContainerTwoComponents::VectorType Complex2DVectorTwoComponents;
 typedef FFT2DTwoComponents::IndexRangeType IndexRangeTwoComponents;
 
+typedef capd::jaco::FFT2D<FOJ1D, ComplexScalar, N, M> JetFFT2DTwoComponents;
+typedef typename JetFFT2DTwoComponents::ModesContainerType JetModes2DContainerTwoComponents;
+
+
 void printVector(const Modes1DContainer::VectorType& v){
   int i;
   for(i=0; i < v.dimension(); ++i)
@@ -77,10 +81,11 @@ void printVector(const Modes1DContainer::VectorType& v){
 /**
  * for test purpose only. Calculates naively a convolution (using O(N^2) operations).
  */
-Modes2DContainer calculateConvolution(int n, const Modes2DContainer& u, const Modes2DContainer& v) {
+template< typename ModesContainerT>
+ModesContainerT calculateConvolution(int n, const ModesContainerT& u, const ModesContainerT& v) {
   Index2D k, k_1;
   ComplexScalar first, second, r;
-  Modes2DContainer s(n, Modes2DContainer::modes2arraySizeStatic(n));
+  ModesContainerT s(n, ModesContainerT::modes2arraySizeStatic(n));
   IndexRange kr(Index2D::zero()),
              k1r(Index2D::zero());
   kr.setRange(0, capd::jaco::strong, n, capd::jaco::weak);
@@ -103,8 +108,9 @@ Modes2DContainer calculateConvolution(int n, const Modes2DContainer& u, const Mo
   return s;
 }
 
-Modes2DContainerTwoComponents calculateTwoComponentProduct(int n, const Modes2DContainerTwoComponents& u, const Modes2DContainerTwoComponents& grad1, const Modes2DContainerTwoComponents& grad2){
-  Modes2DContainerTwoComponents r = u;
+template<typename ModesContainerT>
+ModesContainerT calculateTwoComponentProduct(int n, const ModesContainerT& u, const ModesContainerT& grad1, const ModesContainerT& grad2){
+  ModesContainerT r(n);
 
   IndexRangeTwoComponents r1(Index2DTwoComponents::zero()),
                           k1r(Index2DTwoComponents::zero());
@@ -118,15 +124,15 @@ Modes2DContainerTwoComponents calculateTwoComponentProduct(int n, const Modes2DC
   k[1] = 0;
   k.l = 0;
   for(; !k.limitReached(r1); k.inc(r1, true)){
-    r.set(k, ComplexScalar(0));
     k1r.k = k;
     for(k_1[0] = -n, k_1[1] = -n, k_1.l = 0; !k_1.limitReached(k1r); k_1.inc(k1r, true)){
-      if(r1.squareNorm(k-k_1) <= n*n && r1.squareNorm(k_1) <= n*n){
+      if(abs((k-k_1)[0]) <= n && abs((k-k_1)[1]) <=n && abs(k_1[0]) <= n && abs(k_1[1]) <= n){
         k_1_2 = k_1;
         k_1_2.l = 1;
         kmk1_2 = k-k_1;
         kmk1_2.l = 1;
-        r[k] +=  u[k_1] * grad1[k-k_1] + u[k_1_2] * grad1[kmk1_2];
+        r[k] += u[k_1] * grad1[k-k_1];
+        r[k] += u[k_1_2] * grad1[kmk1_2];
       }
 
     }
@@ -136,15 +142,15 @@ Modes2DContainerTwoComponents calculateTwoComponentProduct(int n, const Modes2DC
   k[1] = 0;
   k.l = 1;
   for(; !k.limitReached(r1); k.inc(r1, true)){
-    r.set(k, ComplexScalar(0));
     k1r.k = k;
     for(k_1[0] = -n, k_1[1] = -n, k_1.l = 1; !k_1.limitReached(k1r); k_1.inc(k1r, true)){
-      if(r1.squareNorm(k-k_1) <= n*n && r1.squareNorm(k_1) <= n*n){
+      if(abs((k-k_1)[0]) <= n && abs((k-k_1)[1]) <=n && abs(k_1[0]) <= n && abs(k_1[1]) <= n){
         k_1_2 = k_1;
         k_1_2.l = 0;
         kmk1_2 = k-k_1;
         kmk1_2.l = 0;
-        r[k] += u[k_1_2] * grad2[kmk1_2] + u[k_1] * grad2[k-k_1];
+        r[k] += u[k_1_2] * grad2[kmk1_2];
+        r[k] += u[k_1] * grad2[k-k_1];
       }
     }
   }
@@ -267,19 +273,20 @@ void fft2dTwoComponentTest(){
   u.set(index2, ComplexScalar(0, -1));
   //these are easier test values
 
-
   int i,j;
   Interval diam = Interval(-1e-5, 1e-5);
   IndexRangeTwoComponents range;
   range.setRange(0, capd::jaco::strong, n, capd::jaco::weak);
 
   for(ind = fft2d.firstModeIndex(range); !ind.limitReached(range); ind.inc(range)){
-    u.set(ind, ComplexScalar(double(rand())/RAND_MAX + diam, double(rand())/RAND_MAX + diam));
+    //u.set(ind, ComplexScalar(double(rand())/RAND_MAX + diam, double(rand())/RAND_MAX + diam));
   }
 
   fft2d.CalculateGradients(u, grad1, grad2);
 
   clock_t start, end;
+
+  FOJ1D::switchToComplexValued();
 
   fft2d.fastTransform(u, ru); //calculates transforms of Pu, and its gradients
   fft2d.scalarProduct(ru, scp);
@@ -297,6 +304,68 @@ void fft2dTwoComponentTest(){
 
 }
 
+void jet2DFFTTest(){
+  int m = 15,
+      n = 4,
+      d = JetModes2DContainerTwoComponents::modes2arraySizeStatic(n);
+
+  ///begin FOJ initialization for FFT integrator
+  capd::jaco::DPDEContainer container;
+  ///2.set here the subspace of the initial condition e.g. setToRealValuedOdd means that the initial condition is real valued odd
+  container.setToRealValued();
+  FOJ1D::initialize(JetModes2DContainerTwoComponents::modes2arraySizeStatic(n), container);
+  ///end FOJ initialization
+
+  JetFFT2DTwoComponents fft2d(n, m, Interval::pi());
+
+  JetFFT2DTwoComponents::DFTGridType s(m), ru(m), rv(m), rGrad1(m), rGrad2(m), scp(m);
+
+  ComplexVector temp(m), tempR(m), pad(m);
+
+  Modes2DContainerTwoComponents polybd(n, d);
+
+  JetModes2DContainerTwoComponents u(n, d), v(n, d), r(n, d), c(n, d), grad1(n, d), grad2(n, d), projectedu(n, d);
+  Index2DTwoComponents index1, index2, ind, ind_2;
+  index1[0] = 1;
+  index1[1] = 0;
+  index1.l = 1;
+  polybd.set(index1, ComplexScalar(0, -1));
+
+  index2[0] = 0;
+  index2[1] = 1;
+  index2.l = 0;
+  polybd.set(index2, ComplexScalar(0, -1));
+  //these are easier test values
+
+  int i,j;
+  Interval diam = Interval(0.);
+  IndexRangeTwoComponents range;
+  range.setRange(0, capd::jaco::strong, n, capd::jaco::weak);
+
+  for(ind = fft2d.firstModeIndex(range); !ind.limitReached(range); ind.inc(range)){
+    polybd.set(ind, ComplexScalar(double(rand())/RAND_MAX + diam, double(rand())/RAND_MAX + diam));
+  }
+  u = polybd;
+
+  fft2d.CalculateGradients(u, grad1, grad2);
+
+  clock_t start, end;
+
+  fft2d.fastTransform(u, ru); //calculates transforms of Pu, and its gradients
+  fft2d.scalarProduct(ru, scp);
+  fft2d.inverseExtendedTransform(scp, r, 0);
+  fft2d.inverseExtendedTransform(scp, r, 1);
+
+  fft2d.project(u, projectedu);
+
+  c = calculateTwoComponentProduct(n, projectedu, grad1, grad2);
+
+  generalDebug << "r:\n" << r ;
+  generalDebug << "c:\n" << c ;
+
+//  assert(c.subset(r));
+  std::cout << "XXX\n";
+}
 
 
 int main(int argc, char * argv[]){
@@ -307,8 +376,9 @@ int main(int argc, char * argv[]){
   generalDebug2.log = true;
   
 
-  fft2dOneComponentTest();
-  fft2dTwoComponentTest();
+  //fft2dOneComponentTest();
+  //fft2dTwoComponentTest();
   
+  jet2DFFTTest();
 
 }

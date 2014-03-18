@@ -1073,8 +1073,6 @@ public:
 
 
 
-
-
 /**Calculates 2D FFT for M which is a power of two. This is a variant dedicated for use in the Taylor integrators, it
  * uses specific data representation. First template parameter (ScalarT) is a type that is transformed (complex number,
  * Taylor coefficients), second template parameter (ComplexScalarT) is a class representing a complex number (needed in
@@ -1193,8 +1191,9 @@ public:
     s[0][1].multiply(grid[0], grid.gradient[1][0]);
     s[1][1].multiply(grid[1], grid.gradient[1][1]);
 
-    r[0] = s[0][0] + s[1][0];
-    r[1] = s[0][1] + s[1][1];
+    r[0] = s[1][0] + s[0][0];
+    r[1] = s[1][1] + s[0][1];
+
   }
 
   /**
@@ -1256,15 +1255,15 @@ public:
     ir.setRange(0, capd::jaco::strong, n, capd::jaco::weak);
     for(IndexType ind = this->firstModeIndex(ir), ind_2; !ind.limitReached(ir); ind.inc(ir)){
       if(ind.l == 0){
-        grad1.set(ind,  ind[0] * (ComplexScalarType::i() * u[ind])); //partial u_1 / partial x_1
+        grad1.set(ind,  ( ind[0] * ComplexScalarType::i() ) * u[ind]); //partial u_1 / partial x_1
         ind_2 = ind;
         ind_2.l = 1;
-        grad1.set(ind_2,  ind[1] * (ComplexScalarType::i() * u[ind])); //partial u_1 / partial x_2
+        grad1.set(ind_2, ( ind[1] * ComplexScalarType::i() ) * u[ind]); //partial u_1 / partial x_2
       }else{
-        grad2.set(ind,   ind[1] * (ComplexScalarType::i() * u[ind])); //partial u_1 / partial x_1
+        grad2.set(ind,  ( ind[1] * ComplexScalarType::i() ) * u[ind]); //partial u_1 / partial x_1
         ind_2 = ind;
         ind_2.l = 0;
-        grad2.set(ind_2, ind[0] * (ComplexScalarType::i() * u[ind])); //partial u_1 / partial x_2
+        grad2.set(ind_2, ( ind[0] * ComplexScalarType::i() ) * u[ind]); //partial u_1 / partial x_2
       }
     }
   }
@@ -1276,7 +1275,8 @@ public:
 
     for(i = this->firstModeIndex(range), i.l = 0; !i.limitReached(range); i.inc(range, true)){
       //calculate scalar products
-      ScalarType scpr = i[0] * in[i] + i[1] * in[i.nextComponent()];
+      ScalarType scpr = i[0] * in[i];
+      scpr += i[1] * in[i.nextComponent()];
       IntervalType norm = i.squareEuclNorm();
 
       projected.set(i, in[i] - (i[0] / norm) * scpr);

@@ -536,7 +536,7 @@ public:
     out << "ComplexPolyBdJetOptimized\n" << (DPDEContainer&)c << "\n";
     IndexType index;
     for(index = c.firstModeIndex(c.irProjection); !index.limitReached(c.irProjection); index.inc(c.irProjection)){      
-      out << index << ": " << c[index] << "\n";
+      out << index << "," << c.mode2array(index) << " : " << c[index] << "\n";
     }
     out << "conjugate part:\n";
     for(index = c.firstModeIndex(c.irProjection); !index.limitReached(c.irProjection); index.inc(c.irProjection)){      
