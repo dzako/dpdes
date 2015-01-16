@@ -36,6 +36,25 @@ enum Shift{quarterGridCell, halfGridCell};
 enum TransformType{realValuedTransform, complexValuedTransform};//if transform is real-valued, or complex-valued
 /**Real odd boundary conditions*/
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /**Calculates one-dimensional FFT.
  * First template parameter (ScalarT) is a type that is transformed (complex number, Taylor coefficients),
  * second template parameter (ComplexScalarT) is a class representing a complex number (needed in order to construct
@@ -883,6 +902,27 @@ public:
 };
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /*
  * 17.04.2013 tested to work good
  */
@@ -1070,6 +1110,25 @@ public:
 
 
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1279,8 +1338,14 @@ public:
       scpr += i[1] * in[i.nextComponent()];
       IntervalType norm = i.squareEuclNorm();
 
-      projected.set(i, in[i] - (i[0] / norm) * scpr);
-      projected.set(i.nextComponent(), in[i.nextComponent()] - (i[1] / norm) * scpr);
+      //!!!!!!!!!!!!! VARIANT WITHOUT PROJECTION !!!!!!!!!!!!!!
+      //if( i.maxNorm() <= 7){
+        projected.set(i, in[i]);
+        projected.set(i.nextComponent(), in[i.nextComponent()]);
+      //}
+
+      /*projected.set(i, in[i] - (i[0] / norm) * scpr);
+      projected.set(i.nextComponent(), in[i.nextComponent()] - (i[1] / norm) * scpr);*/
 
     }
   }
@@ -1304,7 +1369,6 @@ public:
   }
 
   /**
-   *
    * @param s two dimensional DFT grid
    * @param r values of modes after inverse transform (direction parameter determines which direction [in 2D case either 0 or 1])
    *          is being calculated)
@@ -1330,7 +1394,6 @@ public:
 
 
   /**
-   *
    * @param s two dimensional , two component DFT grid
    * @param r values of modes after inverse transform (component parameter determines which direction [in 2D case either 0 or 1])
    *          is being calculated)
@@ -1369,6 +1432,143 @@ public:
 
 
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+template< class ScalarT, class ComplexScalarT, int N, int M,
+  class ModesContainerT = capd::jaco::ComplexPolyBdJetOptimized<typename ComplexScalarT::ScalarType, ScalarT, capd::jaco::Index2DTwoComponents, 2*2*2*N*N> >
+class FFT2DStreamFunction : public FFT2D<ScalarT, ComplexScalarT, N, M, ModesContainerT>{
+public:
+
+  typedef FFT2D<ScalarT, ComplexScalarT, N, M, ModesContainerT> BaseFFT;
+  typedef ScalarT ScalarType;
+  typedef ComplexScalarT ComplexScalarType;
+  typedef typename ComplexScalarType::ScalarType IntervalType;
+  typedef FFT1D<ScalarType, ComplexScalarType, N, M> FFT1DType;
+  typedef typename FFT1DType::VectorType Vector1DType;
+  typedef ModesContainerT ModesContainer2DType;
+  typedef typename FFT1DType::ModesContainerType ModesContainer1DType;
+  typedef ModesContainer2DType ModesContainerType;
+  typedef capd::jaco::DFT2DGrid<IntervalType, ScalarType, M> DFT2DGridType;
+  typedef capd::jaco::ComponentGrid<DFT2DGridType, 2> DFT2DComponentGridType;
+  typedef DFT2DComponentGridType DFTGridType;
+  typedef typename DFT2DGridType::DFT1DGridType DFT1DGridType;
+  typedef capd::jaco::Index2DTwoComponents Index2DType;
+  typedef Index2DType IndexType;
+  typedef typename FFT1DType::IndexType Index1DType;
+
+  typedef capd::jaco::DFT1DGrid<IntervalType, ModesContainer1DType, M> Grid1DOfModesContainer1DType; ///<is that not too complicated?
+  typedef capd::jaco::ComplexPolyBdJetOptimized<IntervalType, DFT1DGridType, Index1DType, 2*N > ModesContainer1DOfGrid1DType;
+  typedef typename ModesContainerType::SubspaceType SubspaceType;
+  typedef typename SubspaceType::IndexRangeType IndexRangeType;
+
+
+
+  FFT2DStreamFunction(){}
+
+  FFT2DStreamFunction(int n_, int m_, IntervalType pi_) : BaseFFT(n_, m_, pi_){
+    int i, j;
+    for(i=0; i < m; ++i)
+      gridOfModes[i] = ModesContainer1DType(n);
+    for(i=-n; i <= n; ++i)
+      modesContainerOfGrid[Index1D(i)] = DFT1DGridType(m);
+    for(i=0; i < 2; i++)
+      for(j=0; j < 2; j++){
+        s[i][j] = DFT2DGridType(m);
+        t[i][j] = ModesContainer2DType( n );
+      }
+  }
+
+
+  inline void CalculateGradients(const ModesContainer2DType& u, ModesContainer2DType& grad1, ModesContainer2DType& grad2){
+    IndexRangeType ir;
+    ir.setRange(0, capd::jaco::strong, n, capd::jaco::weak);
+    for(IndexType ind = this->firstModeIndex(ir), ind_2; !ind.limitReached(ir); ind.inc(ir)){
+      if(ind.l == 0){
+        grad1.set(ind,  ( ind[0] * ComplexScalarType::i() ) * u[ind]);
+        //partial u_1 / partial x_1
+        ind_2 = ind;
+        ind_2.l = 1;
+        grad1.set(ind_2, ( ind[1] * ComplexScalarType::i() ) * u[ind]);
+        //partial u_1 / partial x_2
+      }else{
+        /*grad2.set(ind,  ( ind[1] * ComplexScalarType::i() ) * u[ind]); //partial u_1 / partial x_1
+        ind_2 = ind;
+        ind_2.l = 0;
+        grad2.set(ind_2, ( ind[0] * ComplexScalarType::i() ) * u[ind]); //partial u_1 / partial x_2*/
+      }
+    }
+  }
+
+
+  inline void project(const ModesContainer2DType& in, ModesContainer2DType& projected){
+    IndexRangeType range;
+    range.setRange(0, capd::jaco::strong, n, capd::jaco::weak);
+    IndexType i, i2;
+
+    for(i = this->firstModeIndex(range), i.l = 0; !i.limitReached(range); i.inc(range, true)){
+      //calculate scalar products
+      i2 = i;
+      i2.l = 0; //there is only one component (stream function)
+      projected.set(i, -1. * (i[1] / (i[0] * i[0] + i[1] * i[1])) * in[i2]  );
+      projected.set(i.nextComponent(), -1. * -(i[0] / (i[0] * i[0] + i[1] * i[1])) * in[i2] );
+      //additional -1 comes from -\Delta
+
+    }
+  }
+
+
+  inline void fastTransform(const ModesContainer2DType& modes, DFTGridType& r){
+    CalculateGradients(modes, grad1, grad2);
+
+    project(modes, projected);
+
+    //solutions << "grad1:\n" << grad1 << "\nprojected:\n" << projected << "\n";
+
+    extendedTransform(projected, r[0], 0);
+    extendedTransform(projected, r[1], 1);
+
+    //there is only one component, therefore we calculate one gradient
+    extendedTransform(grad1, r.gradient[0][0], 0);
+    extendedTransform(grad1, r.gradient[0][1], 1);
+
+    //extendedTransform(grad2, r.gradient[1][0], 0);
+    //extendedTransform(grad2, r.gradient[1][1], 1);
+
+  }
+
+
+  using BaseFFT::m;
+  using BaseFFT::n;
+  using BaseFFT::fft1d;
+  using BaseFFT::gridOfModes;
+  using BaseFFT::modesContainerOfGrid;
+  using BaseFFT::s;
+  using BaseFFT::t;
+  using BaseFFT::projected;
+  using BaseFFT::grad1;
+  using BaseFFT::grad2;
+  using BaseFFT::extendedTransform;
+
+
+};
+
+
+
+
+
+
+
 
 
 }

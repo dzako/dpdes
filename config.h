@@ -52,7 +52,7 @@ capd::auxil::OutputStream inclDebug(std::cout, false, true);
 
 extern inline void setLoggers(){
   generalDebug.logfile("general.txt", true);
-  generalDebug.log = false;
+  generalDebug.log = true;
   generalDebug2.logfile("general2.txt", true);
   generalDebug2.log = false;
   enclosureDebug.logfile("enclosure.txt", true);

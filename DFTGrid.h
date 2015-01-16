@@ -160,7 +160,6 @@ public:
       out << i*2*3.14159265358979323846264338/double(c.m) << " " << rightBound( c[i].secondFreeCoeff().re ) << "\n";
     }
     out << "\n";
-    return out;
   }
   
   friend std::ostream& operator<<(std::ostream& out, const DFT1DGrid& c){

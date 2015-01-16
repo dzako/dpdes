@@ -106,6 +106,8 @@ public:
     return -j.squareEuclNorm() * ni(j);
   }
 
+  ///!!!!!! IMPORTANT HERE CHANGED EIGENVALUES TO BILAPLACIAN !!!!!
+
   ///k is the index of mode, lambda_k from the paper.
   RealType lambda_k(int k) const {
     return -k * k * ni(k);
@@ -133,6 +135,249 @@ public:
   }
   using SubspaceType::array2modeIndex;
 };
+
+
+
+///the Burgers PDE
+template<class PolyBdT>
+class BurgersBilaplacian: public PolyBdT::SubspaceType, public capd::jaco::DPDEDefinition<
+    PolyBdT> {
+public:
+  typedef PolyBdT PolyBdType;
+  typedef typename PolyBdType::SubspaceType SubspaceType;
+  typedef typename PolyBdType::ComplexScalarType ComplexType;
+  typedef typename PolyBdType::RealType RealType;
+  typedef typename PolyBdType::IndexType IndexType;
+
+  RealType nu;
+  int m_p;
+  int m_d;
+  int m_r;
+  int m_sufficientlyLarge;
+  int m_factorMaxM;
+  ComplexType m_N_coeff;
+  double S_DISSIPATIVE;
+  RealType piOver_l;
+
+  BurgersBilaplacian(RealType nu_) :
+      nu(nu_), S_DISSIPATIVE(-1), piOver_l(1.) {
+    m_p = 2.;
+    m_d = 1.;
+    m_r = 1.;
+    m_sufficientlyLarge = m_d + m_p + 1;
+    m_N_coeff = -0.5;
+    m_factorMaxM = 3;
+  }
+
+  BurgersBilaplacian(int m, int M, RealType nu_) :
+      SubspaceType(m, M), nu(nu_), S_DISSIPATIVE(-1), piOver_l(1.) {
+    m_p = 2.;
+    m_d = 1.;
+    m_r = 1.;
+    m_sufficientlyLarge = m_d + m_p + 1;
+    m_N_coeff = -0.5;
+    m_factorMaxM = 3;
+  }
+
+  RealType ni(int k) const {
+    return nu;
+  }
+
+  RealType ni(const IndexType& index) const {
+    return nu;
+  }
+
+  const ComplexType& Ncoeff() const {
+    return m_N_coeff;
+  }
+
+  bool isDissipative(int k) {
+    if (lambda(k) < S_DISSIPATIVE) {
+      return true;
+    }
+    return false;
+  }
+
+  /**i is position in an array of a mode.
+   * Returns real part of the eigenvalue \lambda
+   */
+  RealType lambda(int i) const {
+    IndexType j = array2modeIndex(i);
+    //return - j.squareEuclNorm() * j.squareEuclNorm() * j.squareEuclNorm() * j.squareEuclNorm() * j.squareEuclNorm() * j.squareEuclNorm() * ni(j);
+    return - j.squareEuclNorm() * j.squareEuclNorm() * ni(j);
+  }
+
+  ///k is the index of mode, lambda_k from the paper.
+  RealType lambda_k(int k) const {
+    //return - (k * k) * (k * k) * (k * k) * (k * k) * (k * k) * (k * k) * ni(k);
+    return - (k * k) * (k * k) * ni(k);
+  }
+
+  RealType lambda_k(const IndexType& k) const {
+    //return - k.squareEuclNorm() * k.squareEuclNorm() * k.squareEuclNorm() * k.squareEuclNorm() * k.squareEuclNorm() * k.squareEuclNorm() * ni(k);
+    return - k.squareEuclNorm() * k.squareEuclNorm() * ni(k);
+  }
+
+  ///function returning V(K)=\{ \inf{v(|k|} | |k|>=K} \}, see definition of dissipative PDE in the paper.
+  ///Eigenvalues of a dPDE satisfies \lambda_k=-\nu(|k|)|k|^p .
+  RealType V(int K) const {
+    return leftBound(ni(K));
+  }
+
+  RealType V(const IndexType& k) const {
+    return leftBound(ni(k));
+  }
+
+  /**returns smallest integer K larger than k, such that f(i) is monotonously non increasing function for i>K.
+   * Where f(i) = e^{h\lambda_k} k^r
+   */
+  int maximumPoint(const RealType& h, int r, int k) const {
+    return rightBound(ceil(rightBound(sqrt(RealType(r / (2. * nu * h))))));
+  }
+  using SubspaceType::array2modeIndex;
+};
+
+
+///the Euler PDE
+template<class PolyBdT>
+class Euler : public PolyBdT::SubspaceType, public capd::jaco::DPDEDefinition<
+    PolyBdT> {
+public:
+  typedef PolyBdT PolyBdType;
+  typedef typename PolyBdType::SubspaceType SubspaceType;
+  typedef typename PolyBdType::ComplexScalarType ComplexType;
+  typedef typename PolyBdType::RealType RealType;
+  typedef typename PolyBdType::IndexType IndexType;
+
+  RealType nu;
+  int m_p;
+  int m_d;
+  int m_r;
+  int m_sufficientlyLarge;
+  int m_factorMaxM;
+  ComplexType m_N_coeff;
+  double S_DISSIPATIVE;
+  RealType piOver_l;
+
+  Euler(RealType nu_) :
+      nu(nu_), S_DISSIPATIVE(-1), piOver_l(1.) {
+    m_p = 2.;
+    m_d = 1.;
+    m_r = 1.;
+    m_sufficientlyLarge = m_d + m_p + 1;
+    m_N_coeff = 1.;
+    m_factorMaxM = 3;
+  }
+
+  Euler(int m, int M, RealType nu_) :
+      SubspaceType(m, M), nu(nu_), S_DISSIPATIVE(-1), piOver_l(1.) {
+    m_p = 2.;
+    m_d = 1.;
+    m_r = 1.;
+    m_sufficientlyLarge = m_d + m_p + 1;
+    m_N_coeff = 1.;
+    m_factorMaxM = 3;
+  }
+
+  RealType ni(int k) const {
+    return nu;
+  }
+
+  RealType ni(const IndexType& index) const {
+    return nu;
+  }
+
+  const ComplexType& Ncoeff() const {
+    return m_N_coeff;
+  }
+
+  bool isDissipative(int k) {
+    if (lambda(k) < S_DISSIPATIVE) {
+      return true;
+    }
+    return false;
+  }
+
+//  /**i is position in an array of a mode.
+//   * Returns real part of the eigenvalue \lambda
+//   */
+//  RealType lambda(int i) const {
+//    return 0.;
+//  }
+//
+//
+//  ///k is the index of mode, lambda_k from the paper.
+//  RealType lambda_k(int k) const {
+//    return 0.;
+//  }
+//
+//  RealType lambda_k(const IndexType& k) const {
+//    return 0.;
+//  }
+//
+//  ///function returning V(K)=\{ \inf{v(|k|} | |k|>=K} \}, see definition of dissipative PDE in the paper.
+//  ///Eigenvalues of a dPDE satisfies \lambda_k=-\nu(|k|)|k|^p .
+//  RealType V(int K) const {
+//    throw std::runtime_error("not implemented, Euler PDE is NOT dissipative");
+//  }
+//
+//  RealType V(const IndexType& k) const {
+//    throw std::runtime_error("not implemented, Euler PDE is NOT dissipative");
+//  }
+//
+//  /**returns smallest integer K larger than k, such that f(i) is monotonously non increasing function for i>K.
+//   * Where f(i) = e^{h\lambda_k} k^r
+//   */
+//  int maximumPoint(const RealType& h, int r, int k) const {
+//    throw std::runtime_error("not implemented, Euler PDE is NOT dissipative");
+//  }
+//
+//
+//  /**i is position in an array of a mode.
+//     * Returns real part of the eigenvalue \lambda
+//     */
+//    RealType lambda(int i) const {
+//      IndexType j = array2modeIndex(i);
+//      return -j.squareEuclNorm() * ni(j);
+//    }
+
+
+    RealType lambda(int i) const {
+      IndexType j = array2modeIndex(i);
+      return -j.squareEuclNorm() * ni(j);
+    }
+
+
+    ///k is the index of mode, lambda_k from the paper.
+    RealType lambda_k(int k) const {
+      return -k * k * ni(k);
+    }
+
+    RealType lambda_k(const IndexType& k) const {
+      return -k.squareEuclNorm() * ni(k);
+    }
+
+    ///function returning V(K)=\{ \inf{v(|k|} | |k|>=K} \}, see definition of dissipative PDE in the paper.
+    ///Eigenvalues of a dPDE satisfies \lambda_k=-\nu(|k|)|k|^p .
+    RealType V(int K) const {
+      return leftBound(ni(K));
+    }
+
+    RealType V(const IndexType& k) const {
+      return leftBound(ni(k));
+    }
+
+    /**returns smallest integer K larger than k, such that f(i) is monotonously non increasing function for i>K.
+     * Where f(i) = e^{h\lambda_k} k^r
+     */
+    int maximumPoint(const RealType& h, int r, int k) const {
+      return rightBound(ceil(rightBound(sqrt(RealType(r / (2. * nu * h))))));
+    }
+
+
+  using SubspaceType::array2modeIndex;
+};
+
 
 ///the real Ginzburg-Landau PDE
 template<class PolyBdT>
@@ -981,7 +1226,7 @@ public:
     for (index = firstModeIndex(ir_m); !index.limitReached(ir_m);
         index.inc(ir_m)) {
       rhsSeries.set(index,
-          rhsSeries[index] + lambda_k(index) * modes[i][index]);
+         rhsSeries[index] + lambda_k(index) * modes[i][index]);
     }
     if (i == 0) { //vector field is calculated, and thus y_c and forcing have to be added
       rhsSeries += yc;
@@ -3052,6 +3297,7 @@ public:
       forcing; ///<this is an optional forcing
 
   RealType pi;
+  RealType torusScaling;
 
   DPDE2HighDim(int m_, int dftPts1_, RealType nu_, RealType pi_, int order) :
       EquationType(m_, m_, nu_), m(m_), dftPts1(dftPts1_), dftPts(dftPts1), fft1(
@@ -3059,7 +3305,7 @@ public:
           dftPts1), tg1_3(dftPts1), sdft(dftPts1), tmc(m), tmc2(m), tmc3(m), empty(
           dftPts1), rhs(dftPts1), useFFT(true), td(m), tl(m), yc(
           ModesContainerType::modes2realArraySizeStatic(m_)), forcing(
-          ModesContainerType::modes2realArraySizeStatic(m_)), pi(pi_) {
+          ModesContainerType::modes2realArraySizeStatic(m_)), pi(pi_), torusScaling(1.) {
     ir_m.setRange(0, strong, m, weak);
 
     /*if( !(typeid(capd::jaco::Index2D)==typeid(typename FFTType::IndexType) and typeid(capd::jaco::Index2D)==typeid(typename ModesContainerType::IndexType)) ){
@@ -3069,41 +3315,6 @@ public:
 
   }
 
-  inline void CalculateGradients(const ModesContainerType& u,
-      ModesContainerType& grad1, ModesContainerType& grad2) {
-    for (IndexType ind = fft1.firstModeIndex(ir_m), ind_2;
-        !ind.limitReached(ir_m); ind.inc(ir_m)) {
-      if (ind.l == 0) {
-        grad1.set(ind, ind[0] * (ComplexScalarType::i() * u[ind])); //partial u_1 / partial x_1
-        ind_2 = ind;
-        ind_2.l = 1;
-        grad1.set(ind_2, ind[1] * (ComplexScalarType::i() * u[ind])); //partial u_1 / partial x_2
-      } else {
-        grad2.set(ind, ind[1] * (ComplexScalarType::i() * u[ind])); //partial u_1 / partial x_1
-        ind_2 = ind;
-        ind_2.l = 0;
-        grad2.set(ind_2, ind[0] * (ComplexScalarType::i() * u[ind])); //partial u_1 / partial x_2
-      }
-    }
-  }
-
-  inline void project(const ModesContainerType& in,
-      ModesContainerType& projected) {
-    IndexType i;
-    const IndexRangeType& range(ir_m);
-    IndexType i2;
-
-    for (i = this->firstModeIndex(range), i.l = 0; !i.limitReached(range);
-        i.inc(range, true)) {
-      //calculate scalar products
-      ScalarT scpr = i[0] * in[i] + i[1] * in[i.nextComponent()];
-      RealType norm = i.squareEuclNorm();
-      projected[i] = in[i] - (i[0] / norm) * scpr;
-      projected[i.nextComponent()] = in[i.nextComponent()]
-          - (i[1] / norm) * scpr;
-
-    }
-  }
 
   //calculates the scalar product (U \cdot \nabla)U
   inline void CalculateNonlinearTermUsingFFT(const ModesContainerType& in,
@@ -3112,6 +3323,7 @@ public:
       if (ScalarT::initialConditionIsRealValued())
         ScalarT::switchToComplexValued();
       fft1.fastTransform(in, tg1); //calculate dft of the projected part
+
       fft1.scalarProduct(tg1, tg1_2);
       fft1.inverseExtendedTransform(tg1_2, out, 0);
       fft1.inverseExtendedTransform(tg1_2, out, 1);
@@ -3193,7 +3405,8 @@ public:
 
     for (i = this->firstModeIndex(range); !i.limitReached(range);
         i.inc(range)) {
-      out[i] = this->lambda_k(i) * in[i];
+      ///TEMP: torus scaling
+      out[i] = this->torusScaling * this->lambda_k(i) * in[i];
     }
     ///here we dont care about the infinite part, it is handled in the moveParamsFunction
   }
