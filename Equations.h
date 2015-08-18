@@ -265,7 +265,7 @@ public:
     m_d = 1.;
     m_r = 1.;
     m_sufficientlyLarge = m_d + m_p + 1;
-    m_N_coeff = 1.;
+    m_N_coeff = -1.;
     m_factorMaxM = 3;
   }
 
@@ -275,7 +275,7 @@ public:
     m_d = 1.;
     m_r = 1.;
     m_sufficientlyLarge = m_d + m_p + 1;
-    m_N_coeff = 1.;
+    m_N_coeff = -1.;
     m_factorMaxM = 3;
   }
 
@@ -344,17 +344,20 @@ public:
 
     RealType lambda(int i) const {
       IndexType j = array2modeIndex(i);
-      return -j.squareEuclNorm() * ni(j);
+      //return -j.squareEuclNormAlpha(0.7) * ni(j);
+      return 0;
     }
 
 
     ///k is the index of mode, lambda_k from the paper.
     RealType lambda_k(int k) const {
-      return -k * k * ni(k);
+      //return -k * k * ni(k);
+      return 0;
     }
 
     RealType lambda_k(const IndexType& k) const {
-      return -k.squareEuclNorm() * ni(k);
+      //return -k.squareEuclNormAlpha(0.7) * ni(k);
+      return 0;
     }
 
     ///function returning V(K)=\{ \inf{v(|k|} | |k|>=K} \}, see definition of dissipative PDE in the paper.
@@ -377,6 +380,108 @@ public:
 
   using SubspaceType::array2modeIndex;
 };
+
+
+
+///the alpha-Euler PDE
+template<class PolyBdT>
+class AlphaEuler : public PolyBdT::SubspaceType, public capd::jaco::DPDEDefinition<
+    PolyBdT> {
+public:
+  typedef PolyBdT PolyBdType;
+  typedef typename PolyBdType::SubspaceType SubspaceType;
+  typedef typename PolyBdType::ComplexScalarType ComplexType;
+  typedef typename PolyBdType::RealType RealType;
+  typedef typename PolyBdType::IndexType IndexType;
+
+  RealType nu;
+  int m_p;
+  int m_d;
+  int m_r;
+  int m_sufficientlyLarge;
+  int m_factorMaxM;
+  ComplexType m_N_coeff;
+  double S_DISSIPATIVE;
+  RealType piOver_l;
+
+  AlphaEuler(RealType nu_) :
+      nu(nu_), S_DISSIPATIVE(-1), piOver_l(1.) {
+    m_p = 2.;
+    m_d = 1.;
+    m_r = 1.;
+    m_sufficientlyLarge = m_d + m_p + 1;
+    m_N_coeff = -1.;
+    m_factorMaxM = 3;
+  }
+
+  AlphaEuler(int m, int M, RealType nu_) :
+      SubspaceType(m, M), nu(nu_), S_DISSIPATIVE(-1), piOver_l(1.) {
+    m_p = 2.;
+    m_d = 1.;
+    m_r = 1.;
+    m_sufficientlyLarge = m_d + m_p + 1;
+    m_N_coeff = -1.;
+    m_factorMaxM = 3;
+  }
+
+  RealType ni(int k) const {
+    return nu;
+  }
+
+  RealType ni(const IndexType& index) const {
+    return nu;
+  }
+
+  const ComplexType& Ncoeff() const {
+    return m_N_coeff;
+  }
+
+  bool isDissipative(int k) {
+    if (lambda(k) < S_DISSIPATIVE) {
+      return true;
+    }
+    return false;
+  }
+
+  RealType lambda(int i) const {
+    IndexType j = array2modeIndex(i);
+    return - ni(j);
+    //return 0;
+  }
+
+
+  ///k is the index of mode, lambda_k from the paper.
+  RealType lambda_k(int k) const {
+    return - ni(k);
+    //return 0;
+  }
+
+  RealType lambda_k(const IndexType& k) const {
+    return - ni(k);
+    //return 0;
+  }
+
+  ///function returning V(K)=\{ \inf{v(|k|} | |k|>=K} \}, see definition of dissipative PDE in the paper.
+  ///Eigenvalues of a dPDE satisfies \lambda_k=-\nu(|k|)|k|^p .
+  RealType V(int K) const {
+    return leftBound(ni(K));
+  }
+
+  RealType V(const IndexType& k) const {
+    return leftBound(ni(k));
+  }
+
+  /**returns smallest integer K larger than k, such that f(i) is monotonously non increasing function for i>K.
+   * Where f(i) = e^{h\lambda_k} k^r
+   */
+  int maximumPoint(const RealType& h, int r, int k) const {
+    return rightBound(ceil(rightBound(sqrt(RealType(r / (2. * nu * h))))));
+  }
+
+
+  using SubspaceType::array2modeIndex;
+};
+
 
 
 ///the real Ginzburg-Landau PDE
@@ -852,7 +957,7 @@ public:
     m_r = 2.;
     m_factorMaxM = 10;
     m_sufficientlyLarge = m_d + m_p + 1;
-    m_N_coeff = nu;
+    m_N_coeff = nu_;
     piOver_l = 0.5;
     sigma = 0.405284735;
   }
@@ -864,7 +969,7 @@ public:
     m_r = 2.;
     m_factorMaxM = 10;
     m_sufficientlyLarge = m_d + m_p + 1;
-    m_N_coeff = nu;
+    m_N_coeff = nu_;
     piOver_l = 0.5;
     sigma = 0.405284735;
   }
@@ -1369,8 +1474,8 @@ public:
       int s1 = s(pb1), s2 = s(pb2);
 
       ScalarType unit;
-      unit.setLeftBound(-1.);
-      unit.setRightBound(1.);
+      setLeftBound(unit, -1.);
+      setRightBound(unit, 1.);
 
       RealType t = 2. * C1 * C2 * sqrt(1. / ((2. * s1 - 1.) * (2. * s2 - 1.)))
           * (power(1. / ScalarType(M + k[0]), s1 - 0.5)
@@ -1396,8 +1501,8 @@ public:
         IndexRangeType range;
         range.setK_1Range(w_3 * w * M, weak, -1, weak);
         RealType unit;
-        unit.setLeftBound(-1.);
-        unit.setRightBound(1.);
+        setLeftBound(unit, -1.);
+        setRightBound(unit, 1.);
 
         RealType divisor = k.maxNorm() == 0 ? 1 : power(VNormType::norm(k), s_);
         RealType t = Ca * Cb / power(w_2 * w * M, sm - s_)
@@ -2071,6 +2176,7 @@ public:
     tmc2 += tmc3;
     MatrixType m(in.size(), in.size());
     tmc2.monodromyMatrix(m);
+
     if (f)
       useFFT = true;
     ScalarT::switchToGlobalOptimization();
@@ -2698,8 +2804,9 @@ public:
   /**The constructor for FINITE dimensional integrator - only the projection is taken into account
    */
   DPDE3(int m_, int dftPts1_, RealType nu_, RealType pi_, int order) :
-      BaseClass(m_, dftPts1_, nu_, pi_, order), convolutions(order + 1), tpb2(
-          m_, m_), tpb3(m_, m_), tmcN(m_), tmc(2 * m_), tmc2(2 * m_), tmc3(m_) {
+      BaseClass(m_, dftPts1_, nu_, pi_, order), convolutions(order + 1), tpb2(m_, m_),
+      //tpb3(m_, m_), tmcN(m_), tmc(2 * m_), tmc2(2 * m_), tmc3(m_) {
+      tpb3(m_, m_), tmcN(m_), tmc( m_), tmc2( m_), tmc3(m_) {
     int i;
     for (i = 0; i <= order; ++i) {
       convolutions[i] = DFTGridType(dftPts1_);
@@ -2720,7 +2827,8 @@ public:
       BaseClass(m_, M_, dftPts1_, dftPts2_, nu_, pi_, order,
           initializeHigherDFT, w_), convolutions(order + 1), tpb2(m, M), tpb3(m,
           M), tmcN(m), tg3_3(2 * dftPts2_), tg3_4(2 * dftPts2_), tg3_5(
-          2 * dftPts2_), tmc(2 * m_), tmc2(2 * m_), tmc3(m_) {
+          //2 * dftPts2_), tmc(2 * m_), tmc2(2 * m_), tmc3(m_) {
+          2 * dftPts2_), tmc( m_), tmc2( m_), tmc3(m_) {
     int i;
     for (i = 0; i <= order; ++i) {
       convolutions[i] = DFTGridType(dftPts1_);
@@ -3164,6 +3272,7 @@ public:
       int range = full) {
     L(in, out);
     N(in, tmc, range);
+    std::cout << "in.n=" << in.n << " , out.n=" << out.n << " , tmc.n=" << tmc.n << "\n";
     out += tmc;
     out += yc; ///add y_c
     out += forcing; ///add forcing
@@ -3280,14 +3389,11 @@ public:
 
   IndexRangeType ir_m, ir_finiteTail;
 
-  DFTGridType tg1, tg1_2, tg1_3, sdft; ///<auxiliary variables, remember to initialize them!
-  ModesContainerType tmc, tmc2, tmc3; ///<auxiliary variables, remember to initialize them!
+  DFTGridType tg1, tg1_2, sdft; ///<auxiliary variables, remember to initialize them!
+  ModesContainerType tmc; ///<auxiliary variables, remember to initialize them!
 
-  //below are temporary variables for overestimation optimized FFT
-  ModesContainerType delta_u, delta_v, mu, mv, r1;
 
-  DFTGridType r_delta_u, r_abs_mu, r_delta_v, r_abs_mv, r_mu, r_mv, s1, s2, s3,
-      s4;
+  //DFTGridType r_delta_u, r_abs_mu, r_delta_v, r_abs_mv, r_mu, r_mv, s1, s2, s3, s4;
 
   DFTGridType empty, ///<auxiliary variable
       rhs; ///<auxiliary variable
@@ -3300,12 +3406,17 @@ public:
   RealType torusScaling;
 
   DPDE2HighDim(int m_, int dftPts1_, RealType nu_, RealType pi_, int order) :
-      EquationType(m_, m_, nu_), m(m_), dftPts1(dftPts1_), dftPts(dftPts1), fft1(
+      /*EquationType(m_, m_, nu_), m(m_), dftPts1(dftPts1_), dftPts(dftPts1), fft1(
           m, dftPts1, pi_), ir_m(IndexType::zero()), tg1(dftPts1), tg1_2(
           dftPts1), tg1_3(dftPts1), sdft(dftPts1), tmc(m), tmc2(m), tmc3(m), empty(
           dftPts1), rhs(dftPts1), useFFT(true), td(m), tl(m), yc(
           ModesContainerType::modes2realArraySizeStatic(m_)), forcing(
-          ModesContainerType::modes2realArraySizeStatic(m_)), pi(pi_), torusScaling(1.) {
+          ModesContainerType::modes2realArraySizeStatic(m_)), pi(pi_), torusScaling(1.) */
+      EquationType(m_, m_, nu_), m(m_), dftPts1(dftPts1_), dftPts(dftPts1), fft1(
+          m, dftPts1, pi_), ir_m(IndexType::zero()), tg1(dftPts1), tg1_2(
+          dftPts1), sdft(dftPts1), tmc(m), rhs(dftPts1), useFFT(true), yc(
+          ModesContainerType::modes2realArraySizeStatic(m_)), forcing(
+          ModesContainerType::modes2realArraySizeStatic(m_)), pi(pi_), torusScaling(1.){
     ir_m.setRange(0, strong, m, weak);
 
     /*if( !(typeid(capd::jaco::Index2D)==typeid(typename FFTType::IndexType) and typeid(capd::jaco::Index2D)==typeid(typename ModesContainerType::IndexType)) ){
@@ -3314,7 +3425,6 @@ public:
      }*/
 
   }
-
 
   //calculates the scalar product (U \cdot \nabla)U
   inline void CalculateNonlinearTermUsingFFT(const ModesContainerType& in,
@@ -3325,7 +3435,10 @@ public:
       fft1.fastTransform(in, tg1); //calculate dft of the projected part
 
       fft1.scalarProduct(tg1, tg1_2);
+
+      //solutions << "tg1_2=\n" << tg1_2 << "\n";
       fft1.inverseExtendedTransform(tg1_2, out, 0);
+      //solutions << "out=\n" << out << "\n";
       fft1.inverseExtendedTransform(tg1_2, out, 1);
       if (ScalarT::initialConditionIsRealValued())
         ScalarT::switchToRealValued();
@@ -3335,8 +3448,56 @@ public:
       throw std::runtime_error(
           "DPDE2HighDim.CalculateNonlinearTermUsingFFT is implemented only for finite dimension.");
     }
-
   }
+
+  //calculates 'reduced'  (U \cdot \nabla)U (see N1, N2 description)
+  inline void CalculateNonlinearTermUsingFFT_component1(const ModesContainerType& in,
+      ModesContainerType& out) {
+    if (!in.infiniteDimensional) {
+      if (ScalarT::initialConditionIsRealValued())
+        ScalarT::switchToComplexValued();
+      fft1.partialFastTransform4(in, tg1); //calculate dft of the projected part
+
+      fft1.scalarProduct(tg1, tg1_2);
+
+      //solutions << "tg1_2=\n" << tg1_2 << "\n";
+      fft1.inverseExtendedTransform(tg1_2, out, 0);
+      //solutions << "out=\n" << out << "\n";
+      fft1.inverseExtendedTransform(tg1_2, out, 1);
+      if (ScalarT::initialConditionIsRealValued())
+        ScalarT::switchToRealValued();
+    } else {
+      std::cerr
+          << "DPDE2HighDim.CalculateNonlinearTermUsingFFT is implemented only for finite dimension.";
+      throw std::runtime_error(
+          "DPDE2HighDim.CalculateNonlinearTermUsingFFT is implemented only for finite dimension.");
+    }
+  }
+
+  //calculates 'reduced'  (U \cdot \nabla)U (see N1, N2 description)
+  inline void CalculateNonlinearTermUsingFFT_component2(const ModesContainerType& in,
+      ModesContainerType& out) {
+    if (!in.infiniteDimensional) {
+      if (ScalarT::initialConditionIsRealValued())
+        ScalarT::switchToComplexValued();
+      fft1.partialFastTransform1(in, tg1); //calculate dft of the projected part
+
+      fft1.partialScalarProduct2(tg1, tg1_2);
+
+      //solutions << "tg1_2=\n" << tg1_2 << "\n";
+      fft1.inverseExtendedTransform(tg1_2, out, 0);
+      //solutions << "out=\n" << out << "\n";
+      fft1.inverseExtendedTransform(tg1_2, out, 1);
+      if (ScalarT::initialConditionIsRealValued())
+        ScalarT::switchToRealValued();
+    } else {
+      std::cerr
+          << "DPDE2HighDim.CalculateNonlinearTermUsingFFT is implemented only for finite dimension.";
+      throw std::runtime_error(
+          "DPDE2HighDim.CalculateNonlinearTermUsingFFT is implemented only for finite dimension.");
+    }
+  }
+
 
   inline void rightHandSide(int i, const GridsContainerType& grids,
       const ModesContainerContainerType& modes, ModesContainerType& rhsSeries,
@@ -3398,6 +3559,29 @@ public:
     }
   }
 
+  /** Returns 'reduced' Nonlinearity vectors, first is only with x-derivative,
+   *  second is only with y-derivative
+   */
+  inline virtual void N1(const ModesContainerType& in, ModesContainerType& out,
+        int range = full) {
+      if (useFFT) {
+        CalculateNonlinearTermUsingFFT_component1(in, out);
+      } else {
+        std::cerr << "DPDE2HighDim.N is implemented only for FFT.";
+        throw std::runtime_error("DPDE2HighDim.N is implemented only for FFT.");
+      }
+    }
+  inline virtual void N2(const ModesContainerType& in, ModesContainerType& out,
+        int range = full) {
+      if (useFFT) {
+        CalculateNonlinearTermUsingFFT_component2(in, out);
+      } else {
+        std::cerr << "DPDE2HighDim.N is implemented only for FFT.";
+        throw std::runtime_error("DPDE2HighDim.N is implemented only for FFT.");
+      }
+    }
+
+
   inline virtual void L(const ModesContainerType& in,
       ModesContainerType& out) const {
     IndexType i;
@@ -3414,13 +3598,13 @@ public:
   inline void operator()(const ModesContainerType& in, ModesContainerType& out,
       int range = full) {
     L(in, out);
-
     N(in, tmc, range);
 
     out += tmc;
     out += yc; ///add y_c
 
     out += forcing; ///add forcing
+
   }
 
   inline void calculateGrids(int i, const ModesContainerContainerType& modes,

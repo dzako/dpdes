@@ -344,6 +344,7 @@ public:
       }
     }
 
+
     /**auxilliary function used when casting PolyBd object onto RowVector
      * 
      */

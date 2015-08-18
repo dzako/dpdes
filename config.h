@@ -41,6 +41,8 @@ void clearSums(){
   CRmultiplicationsSum = 0;
 }
 
+#define __BOX_DEBUG__ 1
+
 ///DEBUGGING LOGGERS
 capd::auxil::OutputStream generalDebug(std::cout, false, true); //OutputStream for general data
 capd::auxil::OutputStream enclosureDebug(std::cout, false, true); //OutputStream for enclosure data

@@ -1247,13 +1247,28 @@ public:
   inline void scalarProduct(const DFTGridType& grid, DFTGridType& r){
     s[0][0].multiply(grid[0], grid.gradient[0][0]);
     s[1][0].multiply(grid[1], grid.gradient[0][1]);
+
     s[0][1].multiply(grid[0], grid.gradient[1][0]);
     s[1][1].multiply(grid[1], grid.gradient[1][1]);
 
     r[0] = s[1][0] + s[0][0];
     r[1] = s[1][1] + s[0][1];
-
   }
+  inline void partialScalarProduct1(const DFTGridType& grid, DFTGridType& r){
+    s[0][0].multiply(grid[0], grid.gradient[0][0]);
+    s[0][1].multiply(grid[0], grid.gradient[1][0]);
+
+    r[0] = s[0][0];
+    r[1] = s[0][1];
+  }
+  inline void partialScalarProduct2(const DFTGridType& grid, DFTGridType& r){
+    s[1][0].multiply(grid[1], grid.gradient[0][1]);
+    s[1][1].multiply(grid[1], grid.gradient[1][1]);
+
+    r[0] = s[1][0] ;
+    r[1] = s[1][1] ;
+  }
+
 
   /**
      * calculates the scalar product
@@ -1268,6 +1283,7 @@ public:
   inline void scalarProduct(const DFTGridType& grid1, const DFTGridType& grid2, DFTGridType& r){
     s[0][0].multiply(grid1[0], grid2.gradient[0][0]);
     s[1][0].multiply(grid1[1], grid2.gradient[0][1]);
+
     s[0][1].multiply(grid1[0], grid2.gradient[1][0]);
     s[1][1].multiply(grid1[1], grid2.gradient[1][1]);
 
@@ -1331,24 +1347,107 @@ public:
     IndexRangeType range;
     range.setRange(0, capd::jaco::strong, n, capd::jaco::weak);
     IndexType i, i2;
-
     for(i = this->firstModeIndex(range), i.l = 0; !i.limitReached(range); i.inc(range, true)){
       //calculate scalar products
-      ScalarType scpr = i[0] * in[i];
-      scpr += i[1] * in[i.nextComponent()];
+      ScalarType scpr = 0.;
+      //this below should be done better
+      if(i.l == 0){
+        scpr = i[0] * in[i];
+        scpr += i[1] * in[i.nextComponent()];
+      }else{
+        scpr = i[0] * in[i.nextComponent()];
+        scpr += i[1] * in[i];
+      }
       IntervalType norm = i.squareEuclNorm();
-
       //!!!!!!!!!!!!! VARIANT WITHOUT PROJECTION !!!!!!!!!!!!!!
       //if( i.maxNorm() <= 7){
-        projected.set(i, in[i]);
-        projected.set(i.nextComponent(), in[i.nextComponent()]);
+      //  projected.set(i, in[i]);
+      //  projected.set(i.nextComponent(), in[i.nextComponent()]);
       //}
+      /// VARIANT WITH PROJECTION
+      projected.set(i, in[i] - (i[0] / norm) * scpr);
+      projected.set(i.nextComponent(), in[i.nextComponent()] - (i[1] / norm) * scpr);
+    }
+  }
 
-      /*projected.set(i, in[i] - (i[0] / norm) * scpr);
-      projected.set(i.nextComponent(), in[i.nextComponent()] - (i[1] / norm) * scpr);*/
+  inline void partialProject1(const ModesContainer2DType& in, ModesContainer2DType& projected){
+    IndexRangeType range;
+    range.setRange(0, capd::jaco::strong, n, capd::jaco::weak);
+    IndexType i, i2;
+
+    for(i = this->firstModeIndex(range), i.l = 0; !i.limitReached(range); i.inc(range, true)){
+      IntervalType norm = i.squareEuclNorm();
+      if(i.l == 0){
+        projected.set( i, (i[1] * i[1] / norm) * in[i]);
+        projected.set( i.nextComponent(), 0. );
+      }else{
+        projected.set( i.nextComponent(), (i[1] * i[1] / norm) * in[i.nextComponent()] );
+        projected.set( i, 0. );
+      }
+    }
+  }
+
+  inline void partialProject2(const ModesContainer2DType& in, ModesContainer2DType& projected){
+    IndexRangeType range;
+    range.setRange(0, capd::jaco::strong, n, capd::jaco::weak);
+    IndexType i, i2;
+    ScalarType scpr1 = 0.;
+    for(i = this->firstModeIndex(range), i.l = 0; !i.limitReached(range); i.inc(range, true)){
+      IntervalType norm = i.squareEuclNorm();
+      if(i.l == 0){
+        scpr1 = i[1] * in[i.nextComponent()];
+        projected.set(i,  - (i[0] / norm) * scpr1);
+        projected.set(i.nextComponent(),  0.);
+      }else{
+        scpr1 = i[1] * in[i];
+        projected.set(i.nextComponent(),  - (i[0] / norm) * scpr1);
+        projected.set(i,  0. );
+      }
+    }
+  }
+
+  inline void partialProject3(const ModesContainer2DType& in, ModesContainer2DType& projected){
+    IndexRangeType range;
+    range.setRange(0, capd::jaco::strong, n, capd::jaco::weak);
+    IndexType i, i2;
+    for(i = this->firstModeIndex(range), i.l = 0; !i.limitReached(range); i.inc(range, true)){
+      IntervalType norm = i.squareEuclNorm();
+      ScalarType scpr = 0.;
+      if(i.l == 0){
+        scpr = i[1] * in[i.nextComponent()];
+        projected.set(i.nextComponent(),  in[i.nextComponent()] - (i[1] / norm) * scpr);
+        projected.set(i, 0. );
+      }else{
+        scpr = i[1] * in[i];
+        projected.set(i,  in[i] - (i[1] / norm) * scpr);
+        projected.set(i.nextComponent(), 0.);
+      }
 
     }
   }
+
+
+  inline void partialProject4(const ModesContainer2DType& in, ModesContainer2DType& projected){
+    IndexRangeType range;
+    range.setRange(0, capd::jaco::strong, n, capd::jaco::weak);
+    IndexType i, i2;
+
+    for(i = this->firstModeIndex(range), i.l = 0; !i.limitReached(range); i.inc(range, true)){
+      IntervalType norm = i.squareEuclNorm();
+      ScalarType scpr = 0.;
+      if(i.l == 0){
+        scpr = i[0] * in[i];
+        projected.set(i.nextComponent(), - (i[1] / norm) * scpr);
+        projected.set(i, 0.);
+      }else{
+        scpr = i[0] * in[i.nextComponent()];
+        projected.set(i,  - (i[1] / norm) * scpr);
+        projected.set(i.nextComponent(), 0.);
+      }
+
+    }
+  }
+
 
   /* This function is the extended version from the one-dimensional transform. It calculates transform of the
    * function components stored in modes, and all gradients (these are stored in r.gradient).
@@ -1365,8 +1464,66 @@ public:
 
     extendedTransform(grad2, r.gradient[1][0], 0);
     extendedTransform(grad2, r.gradient[1][1], 1);
-
   }
+
+
+  inline void partialFastTransform1(const ModesContainer2DType& modes, DFTGridType& r){
+    CalculateGradients(modes, grad1, grad2);
+
+    partialProject1(modes, projected);
+    extendedTransform(projected, r[0], 0);
+    extendedTransform(projected, r[1], 1);
+
+    extendedTransform(grad1, r.gradient[0][0], 0);
+    extendedTransform(grad1, r.gradient[0][1], 1);
+
+    extendedTransform(grad2, r.gradient[1][0], 0);
+    extendedTransform(grad2, r.gradient[1][1], 1);
+  }
+
+
+  inline void partialFastTransform2(const ModesContainer2DType& modes, DFTGridType& r){
+    CalculateGradients(modes, grad1, grad2);
+
+    partialProject2(modes, projected);
+    extendedTransform(projected, r[0], 0);
+    extendedTransform(projected, r[1], 1);
+
+    extendedTransform(grad1, r.gradient[0][0], 0);
+    extendedTransform(grad1, r.gradient[0][1], 1);
+
+    extendedTransform(grad2, r.gradient[1][0], 0);
+    extendedTransform(grad2, r.gradient[1][1], 1);
+  }
+
+  inline void partialFastTransform3(const ModesContainer2DType& modes, DFTGridType& r){
+    CalculateGradients(modes, grad1, grad2);
+
+    partialProject3(modes, projected);
+    extendedTransform(projected, r[0], 0);
+    extendedTransform(projected, r[1], 1);
+
+    extendedTransform(grad1, r.gradient[0][0], 0);
+    extendedTransform(grad1, r.gradient[0][1], 1);
+
+    extendedTransform(grad2, r.gradient[1][0], 0);
+    extendedTransform(grad2, r.gradient[1][1], 1);
+  }
+
+  inline void partialFastTransform4(const ModesContainer2DType& modes, DFTGridType& r){
+    CalculateGradients(modes, grad1, grad2);
+
+    partialProject4(modes, projected);
+    extendedTransform(projected, r[0], 0);
+    extendedTransform(projected, r[1], 1);
+
+    extendedTransform(grad1, r.gradient[0][0], 0);
+    extendedTransform(grad1, r.gradient[0][1], 1);
+
+    extendedTransform(grad2, r.gradient[1][0], 0);
+    extendedTransform(grad2, r.gradient[1][1], 1);
+  }
+
 
   /**
    * @param s two dimensional DFT grid
@@ -1491,11 +1648,15 @@ public:
 
 
   inline void CalculateGradients(const ModesContainer2DType& u, ModesContainer2DType& grad1, ModesContainer2DType& grad2){
+
+    double alpha = 0.7;
+
+
     IndexRangeType ir;
     ir.setRange(0, capd::jaco::strong, n, capd::jaco::weak);
     for(IndexType ind = this->firstModeIndex(ir), ind_2; !ind.limitReached(ir); ind.inc(ir)){
       if(ind.l == 0){
-        grad1.set(ind,  ( ind[0] * ComplexScalarType::i() ) * u[ind]);
+        grad1.set(ind,  ( ind[0] * alpha * ComplexScalarType::i() ) * u[ind]);
         //partial u_1 / partial x_1
         ind_2 = ind;
         ind_2.l = 1;
@@ -1516,12 +1677,20 @@ public:
     range.setRange(0, capd::jaco::strong, n, capd::jaco::weak);
     IndexType i, i2;
 
+
+    IndexType z = IndexType::zero();
+    projected.set(z, in[z]);
+    projected.set(z.nextComponent(), in[z.nextComponent()]);
+
+    double alpha = 0.7;
+
+
     for(i = this->firstModeIndex(range), i.l = 0; !i.limitReached(range); i.inc(range, true)){
       //calculate scalar products
       i2 = i;
       i2.l = 0; //there is only one component (stream function)
-      projected.set(i, -1. * (i[1] / (i[0] * i[0] + i[1] * i[1])) * in[i2]  );
-      projected.set(i.nextComponent(), -1. * -(i[0] / (i[0] * i[0] + i[1] * i[1])) * in[i2] );
+      projected.set(i, ( ComplexScalarType::i() * ComplexScalarType(-1 * (i[1] / (i[0] * i[0] * alpha * alpha + i[1] * i[1]))) ) * in[i2]  );
+      projected.set(i.nextComponent(), ( ComplexScalarType::i() * ComplexScalarType(-1 *  -1 * (i[0] * alpha / (i[0] * i[0] * alpha * alpha + i[1] * i[1]))) ) * in[i2] );
       //additional -1 comes from -\Delta
 
     }
@@ -1534,7 +1703,6 @@ public:
     project(modes, projected);
 
     //solutions << "grad1:\n" << grad1 << "\nprojected:\n" << projected << "\n";
-
     extendedTransform(projected, r[0], 0);
     extendedTransform(projected, r[1], 1);
 

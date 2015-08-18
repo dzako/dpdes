@@ -47,14 +47,16 @@ public:
   int m, M;
   bool a0IsConstant;
 
-  Real(int m_, int M_) : m(m_), M(M_), a0IsConstant(false){}
+  ///26.01.15 changed here in constructor, a0IsConstant = true
 
-  Real(const Real& r) : a0IsConstant(false){
+  Real(int m_, int M_) : m(m_), M(M_), a0IsConstant(true){}
+
+  Real(const Real& r) : a0IsConstant(true){
     m = r.m;
     M = r.M;
   }
   ///constructor that uses default dimensions
-  Real() : m(0), M(0), a0IsConstant(false){}
+  Real() : m(0), M(0), a0IsConstant(true){}
 
   inline int mode2array(const IndexType& k, bool re) const{
     return k.mode2array(m, re);
@@ -68,11 +70,13 @@ public:
   }
 
   inline IndexType array2modeIndex(int i) const{
-    return IndexType::array2modeIndex(m, i);
+    //26.01.15 here also has to be 2 * i
+    return IndexType::array2modeIndex(m, 2 * i, capd::jaco::withZero);
   }
 
   virtual inline IndexType array2modeIndex(int i, bool& re) const{
-    return IndexType::array2modeIndex(m, i, re);
+    //26.01.15 here also has to be 2 * i
+    return IndexType::array2modeIndex(m, 2 * i, re, capd::jaco::withZero);
   }
 
   inline bool array2realPart(int i) const{

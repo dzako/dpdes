@@ -156,15 +156,21 @@ void basicTest(int testNumber, int approach){
     nu = 3.56;
 
     STEPS = 50000;
-    step = 0.002;
+    step = 0.0005;
 
     srand(time(0));
-    for(int i = 1; i < 5; i++){
+    /*for(int i = 1; i < 5; i++){
       if( rand() % 2 == 0 )
         u_0[ Index1D(i) ].re = 1e-10 + r;
       else
         u_0[ Index1D(i) ].re = -1e-10 + r;
-    }
+    }*/
+
+    u_0[Index1D(3)] = 1e-10;
+    /*u_0[Index1D(2)] = -0.46798070923;
+    u_0[Index1D(6)] = 0.023114271329;
+    u_0[Index1D(10)] = -0.0010800771469;*/
+
     /*u_0[Index1D(3)] = 0.250095;
     u_0[Index1D(9)] = -0.0030652;
     u_0[Index1D(15)] = 3.72671e-05;*/
@@ -305,7 +311,6 @@ void diffInclTest(int testNumber, int approach){
 
   RealPolynomialBound u_0(m, M, container), enclosure(m);
 
-
   setC(u_0, 0);
   setS(u_0, 6);
 
@@ -318,12 +323,19 @@ void diffInclTest(int testNumber, int approach){
     step = 0.0001;
 
     srand(time(0));
-    for(int i = 1; i < 5; i++){
+
+    /*for(int i = 1; i < 5; i++){
       if( rand() % 2 == 0 )
         u_0[ Index1D(i) ].re = 1e-10 + r;
       else
         u_0[ Index1D(i) ].re = -1e-10 + r;
-    }
+    }*/
+
+    u_0[Index1D(3)] = 1e-10 + r;
+
+    ///first eigendirection ?
+    //u_0[ Index1D(2) ].re = 1e-8 + r;
+
     /*u_0[Index1D(3)] = 0.250095;
     u_0[Index1D(9)] = -0.0030652;
     u_0[Index1D(15)] = 3.72671e-05;*/

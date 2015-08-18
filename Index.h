@@ -238,6 +238,13 @@ public:
     return r;
   }
 
+  double squareEuclNormAlpha(double alpha) const{
+    double r = k[0]*k[0] * alpha * alpha;
+    if(d()>1) r += k[1]*k[1];
+    if(d()>2) r += k[2]*k[2];
+    return r;
+  }
+
   inline int maxNorm() const{
     int max = abs(k[0]);
     if(d() > 1 && abs(k[1]) > max) max = abs(k[1]);

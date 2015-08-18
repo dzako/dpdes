@@ -1,6 +1,6 @@
 # a list of all the programs in your project 
-PROGS = 2DIntegratorTest IndicesTests ExactFFTTest FFTTests PolyBd2DTests KSPOTest BurgersFPTest SHTest CHTest
-#PROGS = CHTest
+#PROGS = 2DIntegratorTest IndicesTests ExactFFTTest FFTTests PolyBd2DTests KSPOTest BurgersFPTest SHTest CHTest
+PROGS = DBCPModelHetConProof
 #PROGS = DBCP2DNonrigorous CHNonrigorous
 #PROGS = IndicesTests 2DIntegratorTest
 
@@ -13,7 +13,7 @@ CAPDBINDIR =/usr/local/bin/
 # setting compiler and linker flags
 CAPDFLAGS = `${CAPDBINDIR}capd-config --cflags`
 CAPDLIBS = `${CAPDBINDIR}capd-config --libs`
-CXXFLAGS += ${CAPDFLAGS} -O2 -Wall -D__USE_FILIB__ -frounding-math
+CXXFLAGS += ${CAPDFLAGS} -O2 -Wall -frounding-math -ggdb
 
 #CXXFLAGS += ${CAPDFLAGS} -O2 -Wall -D__USE_FILIB__ -frounding-math -ffloat-store
 #THE FFLOAT-STORE ABOVE MAKES PROGRAM 3 x SLOWER WHEN FILIB INTERVALS WITH ROUNDING ARE USED

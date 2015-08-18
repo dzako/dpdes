@@ -349,7 +349,7 @@ public:
     for(i=0; i < c.m; ++i){
       for(j=0; j < c.m; ++j)
         out << i*2*3.14159265358979323846264338/double(c.m) << " " << j*2*3.14159265358979323846264338/double(c.m)
-        << " " << c[i][j] << "\n";/* leftBound(c[i][j].re) << " " << rightBound(c[i][j].re) << "\n";*/
+        << " " << /*c[i][j] << "\n";*/ leftBound(c[i][j].re) << /*" " << rightBound(c[i][j].re) <<*/ "\n";
     }
     return out;
   }
