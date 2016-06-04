@@ -15,7 +15,7 @@
 
 #define __FILIB__ 0 //whether to use the filib library for interval arithmetic
 
-#define __CONSTANT_M__ 0 //decides whether M is constant or is changing throughout integration
+#define __CONSTANT_M__ 1 //decides whether M is constant or is changing throughout integration
 
 #define __INFLATE_RADIUS__ 2
 
@@ -41,7 +41,7 @@ void clearSums(){
   CRmultiplicationsSum = 0;
 }
 
-#define __BOX_DEBUG__ 1
+#define __BOX_DEBUG__ 0
 
 ///DEBUGGING LOGGERS
 capd::auxil::OutputStream generalDebug(std::cout, false, true); //OutputStream for general data
@@ -54,7 +54,7 @@ capd::auxil::OutputStream inclDebug(std::cout, false, true);
 
 extern inline void setLoggers(){
   generalDebug.logfile("general.txt", true);
-  generalDebug.log = true;
+  generalDebug.log = false;
   generalDebug2.logfile("general2.txt", true);
   generalDebug2.log = false;
   enclosureDebug.logfile("enclosure.txt", true);
@@ -108,5 +108,11 @@ extern inline void setLoggers(){
 
 ///decimal places upto which L is truncated, to determine if its value have stabilised
 #define __L_TRUNCATION_DP__ 2
+
+
+///the aspect ratio of the torus
+#define __ALPHA__ 0.75
+//#define __ALPHA__ 0.836614173
+
 
 #endif

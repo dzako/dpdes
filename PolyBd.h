@@ -246,6 +246,7 @@ public:
 
     inline RealPolynomialBound& operator+=(const RealPolynomialBound& pb){
       (DPDEContainerType&)*this += (DPDEContainerType&)pb;
+
       if(infiniteDimensional == pb.infiniteDimensional)
         (ContainerType&)*this += (ContainerType&)pb;
       else{

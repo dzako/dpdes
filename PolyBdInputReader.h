@@ -77,10 +77,10 @@ public:
       }
       polyBd[IndexType(i)] = ComplexScalarType( ScalarType(leftRe, rightRe), ScalarType(leftIm, rightIm) );
     }
-    fscanf(file, "%s\n", &str);
-    if( strstr(str, "far_tail=\n") != 0 ){
-      std::cerr << "error in input file far_tail=\n";
-    }
+    //fscanf(file, "%s\n", &str);
+    //if( strstr(str, "far_tail=\n") != 0 ){
+    //  std::cerr << "error in input file far_tail=\n";
+    //}
     BoundType Cleft, Cright;
     int s;
     if( fscanf(file, "[%le,%le]\n", &Cleft, &Cright) <= 0 ){

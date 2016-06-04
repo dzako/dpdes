@@ -147,12 +147,11 @@ public:
       std::cerr << "operator+= of the FarTail class works only with tails of equal exponents.\n";
       throw std::runtime_error("operator+= of the FarTail class works only with tails of equal exponents.\n");
     }
-    if(ft1.m_c < ft2.m_c)
-      ft1.m_c = ft2.m_c;
+    ft1.m_c = ft1.m_c + ft2.m_c;
   }
 
   friend std::ostream& operator<<(std::ostream& out, const FarTail2& t) {
-    out << "far tail (k>" << t.M << "): \n|a_k| <= " << t.getC() << " / |k|^" << t.getS() << ", a_" << t.M+1 << "=" << t.getC() / power(t.M + 1, t.getS()) << "\n";
+    out << "far tail (k>" << t.M << "): \n|a_k| <= " << t.getC() << " / |k|^" << t.getS() << ", |a_" << t.M+1 << "|<=" << t.getC() / power(t.M + 1, t.getS()) << "\n";
     return out;
   }
   

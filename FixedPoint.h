@@ -158,11 +158,6 @@ public:
   ///Calculates \sum_{j=1}^{m}{\sup{\frac{\partial N_{(i)}}{\partial x_{(j)}}(x)}}, where i=m+1
   ScalarType partialSum(ScalarType c, ScalarType a0, int i) const;
 
-  ///Calculates the Lipshitz constant in the trapping region in block infinity norm. Needed to prove uniqueness and stability of
-  ///a fixed point.
-  template<class FadMapT>
-  VectorType calculateL(const FadMapT& map, std::ostream& out) const;
-
   ///Returns the doubleton representation of the box, see (4) in the paper. It is an interval set
   ///that is larger than original box, due to wrapping effect.
   void doubleton(VectorType& x, MatrixType& C, VectorType& r0) const;
@@ -496,110 +491,6 @@ typename Box<VectorT, MatrixT, TailT>::ScalarType Box<VectorT, MatrixT, TailT>::
   return sum;
 }
 
-template<class VectorT, class MatrixT, class TailT>
-template<class FadMapT>
-typename Box<VectorT, MatrixT, TailT>::VectorType Box<VectorT, MatrixT, TailT>::calculateL(const FadMapT& map, std::ostream& out) const{
-  int i,j,k, kbar;
-  bool complex;
-  VectorType r(m_n+1);
-  VectorType v=wrapAffine();
-  MatrixType dFtilde=m_Q*map[v]*m_Qinv;
-#if __CALCULATE_L_DEBUG__
-  out<<"d\\tilde{F}(W) matrix (the Jacobian matrix calculated on the finite part of the trapping region): \n"<<dFtilde<<"\n";
-#endif
-  ScalarType c=map.getNCoeff();
-  ScalarType a0=map.getA0();
-  ScalarType lambda=map.lambda_k(map.getm() + 1);
-
-#if __CALCULATE_L_DEBUG__
-   out<<"wrapped affine="<<v<<"\n";
-   out<<"dFtilde="<<dFtilde<<"\n";
-#endif
-
-  for(i=0; i<m_n; i++){
-#if __CALCULATE_L_DEBUG__
-    out<<"i="<<i<<"\n\n";
-    out<<"block="<<getBlock(dFtilde, i, complex)<<"\n";
-    out<<"block norm="<<blockNorm(getBlock(dFtilde, i, complex))<<"\n";
-#endif
-    r[i]=blockNorm(getBlock(dFtilde, i, complex));
-    ///first, we collect the finite number of terms related to the projection coordinates
-    if(complex){
-      for(j=0; j<m_n; j++){
-        if(i!=j && i+1!=j)
-          r[i]+=rightBound(sqrt(power(dFtilde[i][j], 2)+power(dFtilde[i+1][j], 2)));
-      }
-    }else{
-      for(j=0; j<m_n; j++){
-        if(i!=j)
-          r[i]+=rightBound(abs(dFtilde[i][j]));
-      }
-    }
-    ///second, we sum the infinite number of terms related to the coordinates outside the projection
-    for(kbar=m_n-1; kbar>=0; kbar--){
-      k=m_tail.array2mode(kbar);
-#if __CALCULATE_L_DEBUG__
-      out<<"kbar="<<kbar<<"\n";
-      out<<"k="<<k<<"\n";
-      int m=m_tail.getm();
-      out<<"Q[i][kbar]="<<abs(m_Q[i][kbar])<<"\n";
-      out<<"Im(sum("<<k<<"-"<<m<<"-1))="<<sum(k-m_tail.getm()-1, a0, false)<<"\n";
-      out<<"Im(sum("<<k<<"+"<<m<<"+1))="<<sum(k+m_tail.getm()+1, a0, false)<<"\n";
-      out<<"Re(sum("<<k<<"-"<<m<<"-1))="<<sum(k-m_tail.getm()-1, a0, true)<<"\n";
-      out<<"Re(sum("<<k<<"+"<<m<<"+1))="<<sum(k+m_tail.getm()+1, a0, true)<<"\n";
-#endif
-
-      if(complex){ //we use formulas for two dimensional blocks from [ZAKS]
-        r[i]+=(abs(m_Q[i][kbar])+abs(m_Q[i+1][kbar]))*2*c*k*(sum(k-m_tail.getm()-1, a0, false)+sum(k+m_tail.getm()+1, a0, false)+
-            sum(k-m_tail.getm()-1, a0, true)+sum(k+m_tail.getm()+1, a0, true));
-      }else{ //we use formulas for one dimensional blocks from [ZAKS]
-        r[i]+=abs(m_Q[i][kbar])*2*c*k*(sum(k-m_tail.getm()-1, a0, false)+sum(k+m_tail.getm()+1, a0, false)+sum(k-m_tail.getm()-1, a0, true)+
-            sum(k+m_tail.getm()+1, a0, true));
-      }
-    }
-#if __CALCULATE_L_DEBUG__
-    out<<"r["<<i<<"]="<<r[i]<<"\n";
-#endif
-    if(complex){
-      r[i+1]=r[i];
-      i++;
-    }
-  }
-  //looking for maximum in m_Qinv matrix
-  ScalarType max=0;
-  for(i=0; i<m_n; i++)
-    for(j=0; j<m_n; j++){
-      if(abs(m_Qinv[i][j])>max)
-        max=abs(m_Qinv[i][j]);
-    }
-
-#if __CALCULATE_L_DEBUG__
-  out<<"ibar="<<i<<"\n";
-#endif
-  i=m_tail.array2mode(i);
-#if __CALCULATE_L_DEBUG__
-  out<<"partialSum="<<partialSum(c, a0, i)<<"\n";
-  out<<"i="<<i<<"\n";
-  int m=m_tail.getm();
-  out<<"Re(sum("<<i<<"-"<<m<<"))="<<sum(i-m_tail.getm(), a0, true)<<"\n";
-  out<<"Im(sum("<<i<<"-"<<m<<"))="<<sum(i-m_tail.getm(), a0, false)<<"\n";
-  out<<"Re(sum("<<i<<"+1))="<<sum(i+1, a0, true)<<"\n";
-  out<<"Im(sum("<<i<<"+1))="<<sum(i+1, a0, false)<<"\n";
-  out<<"Im(sum("<<i<<"-"<<m<<"-2))="<<sum(i-m_tail.getm()-2, a0, false)<<"\n";
-  out<<"Im(sum("<<i<<"+"<<m<<"+2))="<<sum(i+m_tail.getm()+2, a0, false)<<"\n";
-  out<<"Re(sum("<<i<<"-"<<m<<"-2))="<<sum(i-m_tail.getm()-2, a0, true)<<"\n";
-  out<<"Re(sum("<<i<<"+"<<m<<"+2))="<<sum(i+m_tail.getm()+2, a0, true)<<"\n";
-#endif
-
-  int m = m_tail.getm();
-  r[m_n] = lambda;
-  r[m_n] += 2*c*i*m * max * (sum(i-m+1, a0, true) + sum(i-m+1, a0, false) + sum(i+2, a0, true) + sum(i+2, a0, false));
-  r[m_n] += 2*c*i*(sum(i-m_tail.getm()-1, a0, false)+sum(i+m_tail.getm()+1, a0, false)+sum(i-m_tail.getm()-1, a0, true)+sum(i+m_tail.getm()+1, a0, true));
-#if __CALCULATE_L_DEBUG__
-    out<<"r["<<m_n<<"]="<<r[m_n]<<"\n";
-#endif
-  return r;
-}
 
 template<class VectorT, class MatrixT, class TailT>
 void Box<VectorT, MatrixT, TailT>::printRaw(std::ostream& stream) const{
@@ -739,11 +630,11 @@ public:
   ///Function takes calculated trapping region and inflates it until largest possible trapping region, satisfying $l<0$ enclosing
   ///an approximate fixed point, is obtained.
   bool inflateTrappingRegion( BoxType& trappingRegion, const VectorType& eigenvaluesRe, const MatrixType& T, DoubleVectorType& fp,
-      const VectorType& FatFP, std::ostream& out );
+      const VectorType& FatFP, std::ostream& out , int maxIter = -1);
 
   ///Checks if a given interval set is a trapping region for each Galerkin projection l>m, it assumes that Qbox satisfies
   ///C1, C2, C3 and C4a of Definition 2 (has isolating tail).
-  bool vectorFieldOnBoundaryPointingInwards(BoxType& Qbox, const VectorType& eigenvaluesRe, const MatrixType& T, DoubleVectorType& fp,
+  bool verifyIsolatingBlock(BoxType& Qbox, const VectorType& eigenvaluesRe, const MatrixType& T, DoubleVectorType& fp,
       const VectorType& FatFP) ;
 
   ///Function translates complex change of basis into real change of basis, as a result almost upper triangular matrix is obtained.
@@ -770,6 +661,7 @@ public:
       VectorType& zeroCenteredBox, ///a zero centred box (box around fixed point - fixed point)
       BoxType& Qbox, TailType& tail, DoubleMatrixType& E, VectorType& eigenvaluesRe, MatrixType& T,
       VectorType& FevaluatedAtFP, std::ostream& out);
+
 
   bool schurDecompose(const DoubleMatrixType& A, DoubleMatrixType& T, DoubleMatrixType& S) const;
 
@@ -974,7 +866,7 @@ bool BoxFinder<MultiMapT, JetMultiMapT, DoubleT, D_>::findIsolatingTail(VectorTy
 
 template <class MultiMapT, class JetMultiMapT, class DoubleT, int D_>
 bool BoxFinder<MultiMapT, JetMultiMapT, DoubleT, D_>::inflateTrappingRegion(BoxType& trappingRegion, const VectorType& eigenvaluesRe, const MatrixType& T, DoubleVectorType& fp,
-    const VectorType& FatFP, std::ostream& out ) {
+    const VectorType& FatFP, std::ostream& out , int maxIter ) {
 
 
   TailType tail(trappingRegion.getTail());
@@ -996,14 +888,18 @@ bool BoxFinder<MultiMapT, JetMultiMapT, DoubleT, D_>::inflateTrappingRegion(BoxT
     }
     else {
       potentialTR.setTail(tail);
+      std::cout << "potentialTR.\n " << box << "\ntrail:\n" << tail << "\n";
 
-      if(!vectorFieldOnBoundaryPointingInwards(potentialTR, eigenvaluesRe, T, fp, FatFP)){ //there is no isolation on current box
+      if(!verifyIsolatingBlock(potentialTR, eigenvaluesRe, T, fp, FatFP)){ //there is no isolation on current box
 
         break;
       }
       trappingRegion = potentialTR;
     }
     iterations++;
+    if( maxIter > 0 )
+      if( iterations > maxIter )
+        break;
   }
   if(iterations > 0)
     return true;
@@ -1011,7 +907,7 @@ bool BoxFinder<MultiMapT, JetMultiMapT, DoubleT, D_>::inflateTrappingRegion(BoxT
 }
 
 template <class MultiMapT, class JetMultiMapT, class DoubleT, int D_>
-bool BoxFinder<MultiMapT, JetMultiMapT, DoubleT, D_>::vectorFieldOnBoundaryPointingInwards(BoxType& Qbox, const VectorType& eigenvaluesRe, const MatrixType& T, DoubleVectorType& fp,
+bool BoxFinder<MultiMapT, JetMultiMapT, DoubleT, D_>::verifyIsolatingBlock(BoxType& Qbox, const VectorType& eigenvaluesRe, const MatrixType& T, DoubleVectorType& fp,
     const VectorType& FatFP){
   bool r = true;
   int i, j;
@@ -1037,15 +933,42 @@ bool BoxFinder<MultiMapT, JetMultiMapT, DoubleT, D_>::vectorFieldOnBoundaryPoint
         if(j != i)
           a[i] += T[i][j] * Qbox[j];
       }
-      if(!((diff = eigenvaluesRe[i] * rightBound(Qbox[i]) + a[i] + Qsum[i]) < 0)) {
+
+      bool condition;
+      int sign;
+      if(eigenvaluesRe[i] < 0){
+        condition = !((diff = eigenvaluesRe[i] * rightBound(Qbox[i]) + a[i] + Qsum[i]) < 0);
+        sign = -1;
+      }else{
+        if(eigenvaluesRe[i] > 0){
+          condition = !((diff = eigenvaluesRe[i] * rightBound(Qbox[i]) + a[i] + Qsum[i]) > 0);
+          sign = 1;
+        }
+      }
+
+      if( condition ) {
         r = false;
         std::cout << "FAILED ON i=" << i << "\n" ;
       }
+
+
+      if(eigenvaluesRe[i] < 0){
+          condition = !((diff = eigenvaluesRe[i] * leftBound(Qbox[i]) + a[i] + Qsum[i]) > 0);
+          sign = -1;
+        }else{
+          if(eigenvaluesRe[i] > 0){
+            condition = !((diff = eigenvaluesRe[i] * leftBound(Qbox[i]) + a[i] + Qsum[i]) < 0);
+            sign = 1;
+          }
+        }
       //check if on the projection of the box on the i-th m_dimension v.f. is pointing inwards, second end
-      if(!((diff = eigenvaluesRe[i] * leftBound(Qbox[i]) + a[i] + Qsum[i]) > 0)) {
+      if( condition ) {
         r = false;
         std::cout << "FAILED ON i=" << i << "\n" ;
       }
+
+
+
 
     } else { //complex conjugate pair of eigenvalues
       a[i] = 0;
@@ -1060,9 +983,24 @@ bool BoxFinder<MultiMapT, JetMultiMapT, DoubleT, D_>::vectorFieldOnBoundaryPoint
           a[i - 1] += T[i - 1][j] * Qbox[j];
       }
 
-      if(!((diff = (eigenvaluesRe[i]) * rightBound(Qbox.radius(i)) + sqrt(power((a[i] + Qsum[i]), 2) + power((a[i - 1] + Qsum[i - 1]), 2))) < 0)) {
+      bool condition;
+      int sign;
+      if(eigenvaluesRe[i] < 0){
+        condition = !((diff = (eigenvaluesRe[i]) * rightBound(Qbox.radius(i)) + sqrt(power((a[i] + Qsum[i]), 2) + power((a[i - 1] + Qsum[i - 1]), 2))) < 0);
+        sign = -1;
+      }else{
+        if(eigenvaluesRe[i] > 0){
+          condition = !((diff = (eigenvaluesRe[i]) * rightBound(Qbox.radius(i)) + sqrt(power((a[i] + Qsum[i]), 2) + power((a[i - 1] + Qsum[i - 1]), 2))) > 0);
+          sign = 1;
+        }
+      }
+
+      if( condition ) {
         r = false;
       }
+
+
+
       i--;
     }
   }
@@ -1136,6 +1074,8 @@ bool BoxFinder<MultiMapT, JetMultiMapT, DoubleT, D_>::krawczykRefineMatrix(Doubl
   intersection(Ainv, candidate, Ainv);
   return true;
 }
+
+
 
 template <class MultiMapT, class JetMultiMapT, class DoubleT, int D_>
 bool BoxFinder<MultiMapT, JetMultiMapT, DoubleT, D_>::validateBox(DoubleVectorType& fp, DoubleMatrixType& dDer,
@@ -1327,8 +1267,8 @@ bool BoxFinder<MultiMapT, JetMultiMapT, DoubleT, D_>::validateBox(DoubleVectorTy
 
 
         m_tailIn = VectorType(fp) ;
-          m_multiMap( m_tailIn, m_tailOut );
-          copyFinitePart(m_tailOut, FevaluatedAtFP);
+        m_multiMap( m_tailIn, m_tailOut );
+        copyFinitePart(m_tailOut, FevaluatedAtFP);
 
         m_tailInfiniteIn = box;
         m_tailInfiniteIn.copyTailPartFrom(tail);
@@ -1348,11 +1288,7 @@ bool BoxFinder<MultiMapT, JetMultiMapT, DoubleT, D_>::validateBox(DoubleVectorTy
         out << "Qbox=" << Qbox << "\n";
 #endif
         for(i = m_dim - 1; i > 0; i--) { //TODO 11.08.15 DALEM i > 0 zamiast i >= 0 , bo 1 wspolrzedna to a_0
-          //check if on the projection of the box on the i-th m_dimension v.f. is pointing inwards, the first end
-          if(eigenvaluesRe[i] > 0) {
-            std::cerr << "Error. One of the eigenvalues is positive, the fixed point is probably not stable.\n";
-            throw std::runtime_error("Error. One of the eigenvalues is positive, the fixed point is probably not stable.\n");
-          }
+
 
           if(!Qbox.isDisc(i)) { //purely real eigenvalue, coordinate belongs to the cube coordinates
             a[i] = 0;
@@ -1366,7 +1302,26 @@ bool BoxFinder<MultiMapT, JetMultiMapT, DoubleT, D_>::validateBox(DoubleVectorTy
             out << "a[" << i << "]=" << a[i] << "\n";
             out << "\neigenvalues[" << i << "]*rightBound(Qbox[" << i << "])=" << eigenvaluesRe[i] * rightBound(Qbox[i]) << "\n";
 #endif
-            if(!((diff = eigenvaluesRe[i] * rightBound(Qbox[i]) + a[i] + Qsum[i]) < 0)) {
+
+
+            bool condition;
+            int sign;
+            if(eigenvaluesRe[i] < 0){
+              condition = !((diff = eigenvaluesRe[i] * rightBound(Qbox[i]) + a[i] + Qsum[i]) < 0);
+              sign = -1;
+            }else{
+              if(eigenvaluesRe[i] > 0){
+                condition = !((diff = eigenvaluesRe[i] * rightBound(Qbox[i]) + a[i] + Qsum[i]) > 0);
+                sign = 1;
+              }
+            }
+
+            if( condition ) {
+
+
+
+
+
 #if __BOX_DEBUG__
               out << "!eigenvalues[" << i << "]*rightBound(Qbox[" << i << "])+a[" << i << "]+Qsum[" << i << "]<0\n";
               out << "diff=" << diff << "\n";
@@ -1374,21 +1329,39 @@ bool BoxFinder<MultiMapT, JetMultiMapT, DoubleT, D_>::validateBox(DoubleVectorTy
 #endif
               validated = false;
             } else {
+              if(eigenvaluesRe[i] < 0){ //decrease the box only if the eigenvalue is negative
 #if __BOX_DEBUG__
-              out << "decreasing Qbox[" << i << "].rightBound=" << rightBound(Qbox[i]) << "\n";
-              out << "new rightBound=" << rightBound((a[i] + Qsum[i]) / -eigenvaluesRe[i]) << "\n\n";
+                out << "decreasing Qbox[" << i << "].rightBound=" << rightBound(Qbox[i]) << "\n";
+                out << "new rightBound=" << rightBound((a[i] + Qsum[i]) / ( sign * eigenvaluesRe[i] ) ) << "\n\n";
 #endif
-              Qbox[i].setRightBound(rightBound((a[i] + Qsum[i]) / -eigenvaluesRe[i]));
-              updated[i] = true;
-              wasUpdated = true;
+                Qbox[i].setRightBound(rightBound((a[i] + Qsum[i]) / ( sign * eigenvaluesRe[i] ) ));
+                updated[i] = true;
+                wasUpdated = true;
+              }
             }
 #if __BOX_DEBUG__
             out << "\neigenvalues[" << i << "]*leftBound(Qbox[" << i << "])=" << eigenvaluesRe[i] * leftBound(Qbox[i]) << "\n";
             out << "Qsum[" << i << "]=" << Qsum[i] << "\n";
             out << "a[" << i << "]=" << a[i] << "\n";
 #endif
+
+
+
+
             //check if on the projection of the box on the i-th m_dimension v.f. is pointing inside, second end
-            if(!((diff = eigenvaluesRe[i] * leftBound(Qbox[i]) + a[i] + Qsum[i]) > 0)) {
+            if(eigenvaluesRe[i] < 0){
+              condition = !((diff = eigenvaluesRe[i] * leftBound(Qbox[i]) + a[i] + Qsum[i]) > 0);
+              sign = -1;
+            }else
+              if(eigenvaluesRe[i] > 0){
+                condition = !((diff = eigenvaluesRe[i] * leftBound(Qbox[i]) + a[i] + Qsum[i]) < 0);
+                sign = 1;
+              }
+            if( condition ) {
+
+
+
+
 #if __BOX_DEBUG__
               out << "!eigenvalues[" << i << "]*leftBound(Qbox[" << i << "])+a[" << i << "]+Qsum[" << i << "]>0\n";
               out << "diff=" << diff << "\n\n";
@@ -1396,13 +1369,15 @@ bool BoxFinder<MultiMapT, JetMultiMapT, DoubleT, D_>::validateBox(DoubleVectorTy
 #endif
               validated = false;
             } else {
+              if(eigenvaluesRe[i] < 0){ //decrease the box only if the eigenvalue is negative
 #if __BOX_DEBUG__
-              out << "decreasing Qbox[" << i << "].leftBound=" << leftBound(Qbox[i]) << "\n";
-              out << "new leftBound=" << leftBound((a[i] + Qsum[i]) / -eigenvaluesRe[i]) << "\n\n";
+                out << "decreasing Qbox[" << i << "].leftBound=" << leftBound(Qbox[i]) << "\n";
+                out << "new leftBound=" << leftBound((a[i] + Qsum[i]) / ( sign * eigenvaluesRe[i] ) ) << "\n\n";
 #endif
-              Qbox[i].setLeftBound(leftBound((a[i] + Qsum[i]) / -eigenvaluesRe[i]));
-              updated[i] = true;
-              wasUpdated = true;
+                Qbox[i].setLeftBound(leftBound((a[i] + Qsum[i]) / ( sign * eigenvaluesRe[i] ) ));
+                updated[i] = true;
+                wasUpdated = true;
+              }
             }
           } else { //complex conjugate pair of eigenvalues
             a[i] = 0;
@@ -1423,20 +1398,37 @@ bool BoxFinder<MultiMapT, JetMultiMapT, DoubleT, D_>::validateBox(DoubleVectorTy
             out << "alpha("<<eigenvaluesRe[i]<<")*r=" << (eigenvaluesRe[i]) * rightBound(Qbox.radius(i)) << " rest=" << (sqrt(power((a[i] + Qsum[i]), 2) + power((a[i - 1]
                 + Qsum[i - 1]), 2))) << "\n";
 #endif
-            if(!((diff = eigenvaluesRe[i] * rightBound(Qbox.radius(i)) + sqrt(power((a[i] + Qsum[i]), 2) + power((a[i - 1] + Qsum[i - 1]), 2))) < 0)) {
+
+            bool condition;
+            int sign;
+            if(eigenvaluesRe[i] < 0){
+              condition = !((diff = eigenvaluesRe[i] * rightBound(Qbox.radius(i)) + sqrt(power((a[i] + Qsum[i]), 2) + power((a[i - 1] + Qsum[i - 1]), 2))) < 0);
+              sign = -1;
+            }else
+              if(eigenvaluesRe[i] > 0){
+                condition = !((diff = eigenvaluesRe[i] * rightBound(Qbox.radius(i)) + sqrt(power((a[i] + Qsum[i]), 2) + power((a[i - 1] + Qsum[i - 1]), 2))) > 0);
+                sign = 1;
+              }
+            if( condition ) {
+
+
+
+
 #if __BOX_DEBUG__
               out << "!, diff=" << diff << "\n\n";
 #endif
               validated = false;
             } else {
+              if(eigenvaluesRe[i] < 0){ //decrease the box only if the eigenvalue is negative
 #if __BOX_DEBUG__
-              out << "decreasing ball at i=" << i << "\n";
-              out << "new r=" << rightBound(sqrt(power((a[i] + Qsum[i]), 2) + power((a[i - 1] + Qsum[i - 1]), 2)) / -(eigenvaluesRe[i])) << "\n\n";
+                out << "decreasing ball at i=" << i << "\n";
+                out << "new r=" << rightBound(sqrt(power((a[i] + Qsum[i]), 2) + power((a[i - 1] + Qsum[i - 1]), 2)) / ( sign * eigenvaluesRe[i] )) << "\n\n";
 #endif
-              Qbox.setRadius(i - 1, i, rightBound(sqrt(power((a[i] + Qsum[i]), 2) + power((a[i - 1] + Qsum[i - 1]), 2)) / -eigenvaluesRe[i]));
-              updated[i] = true;
-              wasUpdated = true;
-              updated[i - 1] = true;
+                Qbox.setRadius(i - 1, i, rightBound(sqrt(power((a[i] + Qsum[i]), 2) + power((a[i - 1] + Qsum[i - 1]), 2)) / ( sign * eigenvaluesRe[i] )));
+                updated[i] = true;
+                wasUpdated = true;
+                updated[i - 1] = true;
+              }
             }
             i--;
           }
@@ -1451,11 +1443,9 @@ bool BoxFinder<MultiMapT, JetMultiMapT, DoubleT, D_>::validateBox(DoubleVectorTy
           boxMfp = Qbox.wrap(); //this is box in canonical coordinates minus fixed point
           box = Qbox.wrap(VectorType(fp)); //this is box around fixed point in canonical coordinates
 
-
           m_tailInfiniteIn = box;
           m_tailInfiniteIn.copyTailPartFrom(tail);
           m_multiMap.perturbations(m_tailInfiniteIn, rest);
-
 
           /// !!!!!! 27.06 TODO DOROBIC HESIAN
           sum = FevaluatedAtFP /*+ 0.5 * m_multiMap.hessian(boxMfp)*/ + rest;
@@ -1475,7 +1465,7 @@ bool BoxFinder<MultiMapT, JetMultiMapT, DoubleT, D_>::validateBox(DoubleVectorTy
 std::cout << "lsteps=" << lsteps << "\n";
 
 //TWO refinement steps
-for(refinementSteps=0; refinementSteps<1; refinementSteps++){ // TODO TURNED OFF
+for(refinementSteps=0; refinementSteps < 1; refinementSteps++){ // TODO TURNED OFF
 
   validated = true;
   wasUpdated = false;
@@ -1505,11 +1495,7 @@ for(refinementSteps=0; refinementSteps<1; refinementSteps++){ // TODO TURNED OFF
   out << "Qbox=" << Qbox << "\n";
 #endif
   for(i = m_dim - 1; i > 0; i--) {   //TODO 11.08.15 DALEM i > 0 zamiast i >= 0 , bo 1 wspolrzedna to a_0
-    //check if on the projection of the box on the i-th m_dimension v.f. is pointing inwards, the first end
-    if( eigenvaluesRe[i] > 0 ) {
-      std::cerr << "Error. One of the eigenvalues is positive, the fixed point is probably not stable.\n";
-      throw std::runtime_error("Error. One of the eigenvalues is positive, the fixed point is probably not stable.\n");
-    }
+
 
     if(!Qbox.isDisc(i)) { //purely real eigenvalue, coordinate belongs to the cube coordinates
       a[i] = 0;
@@ -1524,41 +1510,73 @@ for(refinementSteps=0; refinementSteps<1; refinementSteps++){ // TODO TURNED OFF
       out << "a[" << i << "]=" << a[i] << "\n";
       out << "\neigenvalues[" << i << "]*rightBound(Qbox[" << i << "])=" << eigenvaluesRe[i] * rightBound(Qbox[i]) << "\n";
 #endif
-      if(!((diff = eigenvaluesRe[i] * rightBound(Qbox[i]) + a[i] + Qsum[i]) < 0)) {
+
+      bool condition;
+      int sign;
+      if(eigenvaluesRe[i] < 0){
+        condition = !((diff = eigenvaluesRe[i] * rightBound(Qbox[i]) + a[i] + Qsum[i]) < 0);
+        sign = -1;
+      }else{
+        if(eigenvaluesRe[i] > 0){
+          condition = !((diff = eigenvaluesRe[i] * rightBound(Qbox[i]) + a[i] + Qsum[i]) > 0);
+          sign = 1;
+        }
+      }
+      if( condition ) {
+
+
+
 #if __BOX_DEBUG__
         out << "!eigenvalues[" << i << "]*rightBound(Qbox[" << i << "])+a[" << i << "]+Qsum[" << i << "]<0\n";
         out << "diff=" << diff << "\n\n";
 #endif
         validated = false;
       } else {
-#if __BOX_DEBUG__
-        out << "decreasing Qbox[" << i << "].rightBound=" << rightBound(Qbox[i]) << "\n";
-        out << "new rightBound=" << rightBound((a[i] + Qsum[i]) / -eigenvaluesRe[i]) << "\n\n";
-#endif
-        Qbox[i].setRightBound(rightBound((a[i] + Qsum[i]) / -eigenvaluesRe[i]));
-        updated[i] = true;
-        wasUpdated = true;
+        if(eigenvaluesRe[i] < 0){ //decrease the box only if the eigenvalue is negative
+  #if __BOX_DEBUG__
+          out << "decreasing Qbox[" << i << "].rightBound=" << rightBound(Qbox[i]) << "\n";
+          out << "new rightBound=" << rightBound((a[i] + Qsum[i]) / -eigenvaluesRe[i]) << "\n\n";
+  #endif
+          Qbox[i].setRightBound(rightBound((a[i] + Qsum[i]) / -eigenvaluesRe[i]));
+          updated[i] = true;
+          wasUpdated = true;
+        }
       }
 #if __BOX_DEBUG__
       out << "\neigenvalues[" << i << "]*leftBound(Qbox[" << i << "])=" << eigenvaluesRe[i] * leftBound(Qbox[i]) << "\n";
       out << "Qsum[" << i << "]=" << Qsum[i] << "\n";
       out << "a[" << i << "]=" << a[i] << "\n";
 #endif
+
+
+      if(eigenvaluesRe[i] < 0){
+        condition = !((diff = eigenvaluesRe[i] * leftBound(Qbox[i]) + a[i] + Qsum[i]) > 0);
+        sign = -1;
+      }else{
+        if(eigenvaluesRe[i] > 0){
+          condition = !((diff = eigenvaluesRe[i] * leftBound(Qbox[i]) + a[i] + Qsum[i]) < 0);
+          sign = 1;
+        }
+      }
       //check if on the projection of the box on the i-th m_dimension v.f. is pointing inside, second end
-      if(!((diff = eigenvaluesRe[i] * leftBound(Qbox[i]) + a[i] + Qsum[i]) > 0)) {
+      if( condition ) {
+
+
 #if __BOX_DEBUG__
         out << "!eigenvalues[" << i << "]*leftBound(Qbox[" << i << "])+a[" << i << "]+Qsum[" << i << "]>0\n";
         out << "diff=" << diff << "\n\n";
 #endif
         validated = false;
       } else {
-#if __BOX_DEBUG__
-        out << "decreasing Qbox[" << i << "].leftBound=" << leftBound(Qbox[i]) << "\n";
-        out << "new leftBound=" << leftBound((a[i] + Qsum[i]) / -eigenvaluesRe[i]) << "\n\n";
-#endif
-        Qbox[i].setLeftBound(leftBound((a[i] + Qsum[i]) / -eigenvaluesRe[i]));
-        updated[i] = true;
-        wasUpdated = true;
+        if(eigenvaluesRe[i] < 0){ //decrease the box only if the eigenvalue is negative
+  #if __BOX_DEBUG__
+          out << "decreasing Qbox[" << i << "].leftBound=" << leftBound(Qbox[i]) << "\n";
+          out << "new leftBound=" << leftBound((a[i] + Qsum[i]) / -eigenvaluesRe[i]) << "\n\n";
+  #endif
+          Qbox[i].setLeftBound(leftBound((a[i] + Qsum[i]) / -eigenvaluesRe[i]));
+          updated[i] = true;
+          wasUpdated = true;
+        }
       }
     } else { //complex conjugate pair of eigenvalues
       a[i] = 0;
@@ -1578,20 +1596,37 @@ for(refinementSteps=0; refinementSteps<1; refinementSteps++){ // TODO TURNED OFF
       out << "alpha("<<eigenvaluesRe[i]<<")*r=" << (eigenvaluesRe[i]) * rightBound(Qbox.radius(i)) << " rest=" << (sqrt(power((a[i] + Qsum[i]), 2) + power((a[i - 1]
           + Qsum[i - 1]), 2))) << "\n";
 #endif
-      if(!((diff = eigenvaluesRe[i] * rightBound(Qbox.radius(i)) + sqrt(power((a[i] + Qsum[i]), 2) + power((a[i - 1] + Qsum[i - 1]), 2))) < 0)) {
+
+      bool condition;
+      int sign;
+      if(eigenvaluesRe[i] < 0){
+        condition = !((diff = eigenvaluesRe[i] * rightBound(Qbox.radius(i)) + sqrt(power((a[i] + Qsum[i]), 2) + power((a[i - 1] + Qsum[i - 1]), 2))) < 0);
+        sign = -1;
+      }else{
+        if(eigenvaluesRe[i] > 0){
+          condition = !((diff = eigenvaluesRe[i] * rightBound(Qbox.radius(i)) + sqrt(power((a[i] + Qsum[i]), 2) + power((a[i - 1] + Qsum[i - 1]), 2))) > 0);
+          sign = 1;
+        }
+      }
+
+      if( condition ) {
+
+
 #if __BOX_DEBUG__
         out << "!, diff=" << diff << "\n\n";
 #endif
         validated = false;
       } else {
-#if __BOX_DEBUG__
-        out << "decreasing ball at i=" << i << "\n";
-        out << "new r=" << rightBound(sqrt(power((a[i] + Qsum[i]), 2) + power((a[i - 1] + Qsum[i - 1]), 2)) / -(eigenvaluesRe[i])) << "\n\n";
-#endif
-        Qbox.setRadius(i - 1, i, rightBound(sqrt(power((a[i] + Qsum[i]), 2) + power((a[i - 1] + Qsum[i - 1]), 2)) / -eigenvaluesRe[i]));
-        updated[i] = true;
-        wasUpdated = true;
-        updated[i - 1] = true;
+        if(eigenvaluesRe[i] < 0){ //decrease the box only if the eigenvalue is negative
+  #if __BOX_DEBUG__
+          out << "decreasing ball at i=" << i << "\n";
+          out << "new r=" << rightBound(sqrt(power((a[i] + Qsum[i]), 2) + power((a[i - 1] + Qsum[i - 1]), 2)) / -(eigenvaluesRe[i])) << "\n\n";
+  #endif
+          Qbox.setRadius(i - 1, i, rightBound(sqrt(power((a[i] + Qsum[i]), 2) + power((a[i - 1] + Qsum[i - 1]), 2)) / -eigenvaluesRe[i]));
+          updated[i] = true;
+          wasUpdated = true;
+          updated[i - 1] = true;
+        }
       }
       i--;
     }
@@ -1625,7 +1660,7 @@ for(refinementSteps=0; refinementSteps<1; refinementSteps++){ // TODO TURNED OFF
     throw std::runtime_error("A box enclosing a fixed point was not found. Probably the provided Galerkin projection dimension is too small or there is a complex eigenvalue \\alpha+i \\beta the difference between \\alpha and \\beta is too small.\n");
   }
   //checking if found box is in fact isolating
-  if(!vectorFieldOnBoundaryPointingInwards(Qbox, eigenvaluesRe, T, fp, FevaluatedAtFP)){
+  if(!verifyIsolatingBlock(Qbox, eigenvaluesRe, T, fp, FevaluatedAtFP)){
     out << "Vector field on the found potential trapping region (Qbox in validateBox function) is not isolating.\n";
     std::cerr << "Vector field on the found potential trapping region (Qbox in validateBox function) is not isolating.\n";
     throw std::runtime_error("Vector field on the found potential trapping region (Qbox in validateBox function) is not isolating.\n");
@@ -1640,6 +1675,10 @@ for(refinementSteps=0; refinementSteps<1; refinementSteps++){ // TODO TURNED OFF
 #endif
   return validated;
 }
+
+
+
+
 
 template <class MultiMapT, class JetMultiMapT, class DoubleT, int D_>
 void BoxFinder<MultiMapT, JetMultiMapT, DoubleT, D_>::printMatrix(const MatrixType& m, std::ostream& out) const{

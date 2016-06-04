@@ -1,6 +1,7 @@
 # a list of all the programs in your project 
 #PROGS = 2DIntegratorTest IndicesTests ExactFFTTest FFTTests PolyBd2DTests KSPOTest BurgersFPTest SHTest CHTest
-PROGS = DBCPModelHetConProof
+PROGS = DBCPModelHetConProof DBCPTests
+#PROGS = FNTestNonrig
 #PROGS = DBCP2DNonrigorous CHNonrigorous
 #PROGS = IndicesTests 2DIntegratorTest
 

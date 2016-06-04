@@ -1326,11 +1326,14 @@ public:
   }
 
   inline void CalculateGradients(const ModesContainer2DType& u, ModesContainer2DType& grad1, ModesContainer2DType& grad2){
+
+    double alpha = __ALPHA__ ;
+
     IndexRangeType ir;
     ir.setRange(0, capd::jaco::strong, n, capd::jaco::weak);
     for(IndexType ind = this->firstModeIndex(ir), ind_2; !ind.limitReached(ir); ind.inc(ir)){
       if(ind.l == 0){
-        grad1.set(ind,  ( ind[0] * ComplexScalarType::i() ) * u[ind]); //partial u_1 / partial x_1
+        grad1.set(ind,  ( alpha * ind[0] * ComplexScalarType::i() ) * u[ind]); //partial u_1 / partial x_1
         ind_2 = ind;
         ind_2.l = 1;
         grad1.set(ind_2, ( ind[1] * ComplexScalarType::i() ) * u[ind]); //partial u_1 / partial x_2
@@ -1338,12 +1341,31 @@ public:
         grad2.set(ind,  ( ind[1] * ComplexScalarType::i() ) * u[ind]); //partial u_1 / partial x_1
         ind_2 = ind;
         ind_2.l = 0;
-        grad2.set(ind_2, ( ind[0] * ComplexScalarType::i() ) * u[ind]); //partial u_1 / partial x_2
+        grad2.set(ind_2, ( alpha * ind[0] * ComplexScalarType::i() ) * u[ind]); //partial u_1 / partial x_2
       }
     }
   }
 
+  inline ScalarType divergence(const ModesContainer2DType& in, ScalarType div){
+
+    double alpha = __ALPHA__ ;
+
+    IndexRangeType ir;
+    ScalarType r = 0;
+    ir.setRange(0, capd::jaco::strong, n, capd::jaco::weak);
+    IndexType ind2;
+    for(IndexType ind = this->firstModeIndex(ir), ind_2; !ind.limitReached(ir); ind.inc(ir, true) ){
+      ind2 = ind;
+      ind2.l = 1;
+      r += alpha * ind[0] * in[ind] + ind[1] * in[ind2] ;
+    }
+    return r;
+  }
+
   inline void project(const ModesContainer2DType& in, ModesContainer2DType& projected){
+
+    double alpha = __ALPHA__ ;
+
     IndexRangeType range;
     range.setRange(0, capd::jaco::strong, n, capd::jaco::weak);
     IndexType i, i2;
@@ -1352,20 +1374,20 @@ public:
       ScalarType scpr = 0.;
       //this below should be done better
       if(i.l == 0){
-        scpr = i[0] * in[i];
+        scpr = alpha * i[0] * in[i];
         scpr += i[1] * in[i.nextComponent()];
       }else{
-        scpr = i[0] * in[i.nextComponent()];
+        scpr = alpha * i[0] * in[i.nextComponent()];
         scpr += i[1] * in[i];
       }
-      IntervalType norm = i.squareEuclNorm();
+      IntervalType norm = i.squareEuclNormAlpha( alpha );
       //!!!!!!!!!!!!! VARIANT WITHOUT PROJECTION !!!!!!!!!!!!!!
       //if( i.maxNorm() <= 7){
       //  projected.set(i, in[i]);
       //  projected.set(i.nextComponent(), in[i.nextComponent()]);
       //}
       /// VARIANT WITH PROJECTION
-      projected.set(i, in[i] - (i[0] / norm) * scpr);
+      projected.set(i, in[i] - ( alpha * i[0] / norm ) * scpr);
       projected.set(i.nextComponent(), in[i.nextComponent()] - (i[1] / norm) * scpr);
     }
   }
@@ -1455,7 +1477,10 @@ public:
   inline void fastTransform(const ModesContainer2DType& modes, DFTGridType& r){
     CalculateGradients(modes, grad1, grad2);
 
-    project(modes, projected);
+    //project(modes, projected);
+
+    projected = modes;
+
     extendedTransform(projected, r[0], 0);
     extendedTransform(projected, r[1], 1);
 
@@ -1547,6 +1572,7 @@ public:
       fft1d.inverseExtendedTransform(modesContainerOfGrid[Index1D(k_2)], mc1d);
       setProjection(mc1d, r, k_2);
     }
+
   }
 
 
@@ -1572,6 +1598,8 @@ public:
       fft1d.inverseExtendedTransform(modesContainerOfGrid[Index1D(k_2)], mc1d);
       setProjection(mc1d, r, k_2, component);
     }
+
+
   }
 
 
@@ -1649,7 +1677,7 @@ public:
 
   inline void CalculateGradients(const ModesContainer2DType& u, ModesContainer2DType& grad1, ModesContainer2DType& grad2){
 
-    double alpha = 0.7;
+    double alpha = __ALPHA__;
 
 
     IndexRangeType ir;
@@ -1682,7 +1710,7 @@ public:
     projected.set(z, in[z]);
     projected.set(z.nextComponent(), in[z.nextComponent()]);
 
-    double alpha = 0.7;
+    double alpha = __ALPHA__;
 
 
     for(i = this->firstModeIndex(range), i.l = 0; !i.limitReached(range); i.inc(range, true)){

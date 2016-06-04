@@ -18,6 +18,13 @@
 namespace capd{
 namespace jaco{
 
+class Dummy{
+public:
+  Dummy(){
+    std::cout << "HRERERERE\n";
+  }
+};
+
 /**This enum is for selecting the algorithm type that is used. The following three types are avaialble:
  * -Direct evaluation of convolutions,
  * -Evaluation of convolutions using the FFT,
@@ -59,12 +66,14 @@ public:
   ModesContainerType tl;
   ModesContainerContainerType modes;
   GridsContainerType grids; ///<DFT grids calculated for each order
+  Dummy dummy1, dummy2;
 
   /**IMPORTANT: This constructor is used to create a FINITE dimensional integrator (only projection is taken into account)   
    */
   FFTBasicDynSys(int m_, int dftPts_, RealType step_, int order_, RealType pi_, RealType nu_) :
-  EquationTaylorType(m_, dftPts_, nu_, pi_, order_), m(m_), dftPts(dftPts_), step(step_), order(order_), rhsSeries(m),
-  rhsFunctionSpace(dftPts_), td(m), tl(m), modes(order_+1, false), grids(order_+1, false), changeStepAdaptively(false){
+    dummy1(), EquationTaylorType(m_, dftPts_, nu_, pi_, order_), m(m_), dftPts(dftPts_), step(step_), order(order_), rhsSeries(m),
+  rhsFunctionSpace(dftPts_), td(m), tl(m), modes(order_ + 1), grids(order_ + 1), dummy2(), changeStepAdaptively(false){
+
     int i;
     for(i=0; i <= order; ++i){
       modes[i] = ModesContainerType(m);
@@ -127,14 +136,14 @@ public:
 
   RealType computeNextTimeStep(){
     RealType epsilon = power(10, -TypeTraits<RealType>::numberOfDigits()-2),
-             minStep = 1. / 1048576.,
+             minStep = 1e-15,
              maxStep = 0.1,
              optStep = maxStep;
 
     double coeffNorm = toDouble( rightBound(modes[order].maxOfNorms()) );
 //  capd::rounding::DoubleRounding::roundNearest();
     RealType Cstep = exp(log(epsilon / coeffNorm) / (order));
-    Cstep = capd::max(Cstep, minStep);
+    Cstep = capd::max(Cstep, minStep) ;
 
     return capd::min(maxStep, Cstep);
   }
