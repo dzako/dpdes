@@ -88,7 +88,6 @@ typedef capd::jaco::DPDE3<FN, FFT1D, 0> FNDPDE; ///set equation here
 
 typedef capd::jaco::FFTBasicDynSys<FNDPDE, 0> FFTDynSys;
 
-
 typedef capd::jaco::FirstOrderJet<ComplexDerivativePair, 0> FOJ1D;
 
 typedef capd::jaco::ComplexPolyBdJetOptimized<Interval, FOJ1D, Index1D, 0, EvenSubspace> ModesContainer;

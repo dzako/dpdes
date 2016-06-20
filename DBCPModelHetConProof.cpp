@@ -295,8 +295,47 @@ std::ostream& printModes( const char* string, std::ostream& out, const RealPolyn
   return out;
 }
 
+bool subsetFinite(const RealPolynomialBound& pb1, const RealPolynomialBound& pb2){
+  Index1D index;
+  for(index = pb1.firstModeIndex(pb1.irProjectionPlusFiniteTail); !index.limitReached(pb1.irProjectionPlusFiniteTail); index.inc(pb1.irProjectionPlusFiniteTail)){
+    if(!(pb1[index]).re.subset(pb2[index].re)){
+      return false;
+    }
+    if(! (pb1[index]).im.subset(pb2[index].im)){
+      return false;
+    }
+  }
+  return true;
+}
 
+bool subset(const RealPolynomialBound& pb1, const RealPolynomialBound& pb2){
+  Index1D index;
+  for(index = pb1.firstModeIndex(pb1.irProjectionPlusFiniteTail); !index.limitReached(pb1.irProjectionPlusFiniteTail); index.inc(pb1.irProjectionPlusFiniteTail)){
+    if(!(pb1[index]).re.subset(pb2[index].re)){
+      return false;
+    }
+    if(! (pb1[index]).im.subset(pb2[index].im)){
+      return false;
+    }
+  }
+  return pb1.subsetFar(pb2);
+}
 
+//prints out indices for which there is no inclusion
+void noentry(const RealPolynomialBound& pb1, const RealPolynomialBound& pb2, capd::auxil::OutputStream& out){
+  Index1D index;
+  for(index = pb1.firstModeIndex(pb1.irProjectionPlusFiniteTail); !index.limitReached(pb1.irProjectionPlusFiniteTail); index.inc(pb1.irProjectionPlusFiniteTail)){
+    if(!(pb1[index]).re.subset(pb2[index].re)){
+      out << index << " no entry ";
+    }
+    if(! (pb1[index]).im.subset(pb2[index].im)){
+      out << index << " no entry ";
+    }
+  }
+  if(!pb1.subsetFar(pb2)){
+    out << "farTail no entry\n";
+  }
+}
 
 
 void integrate(int approach){
@@ -316,7 +355,7 @@ void integrate(int approach){
 
   clock_t start, end;
 
-  int MAXSTEPS = 200000;;
+  int MAXSTEPS = 20000;;
   capd::auxil::OutputStream log(std::cout, false, true);
   std::stringstream ss;
 
@@ -332,19 +371,19 @@ void integrate(int approach){
   PolyBdInputReader<RealPolynomialBound> inputReader("manifold.in");
   u_0 =  inputReader.polyBd;
 
-  u_0.changeM(100, false);
+  u_0.changeM(M, false);
 
   std::cout << "Input polynomial bound=\n" << u_0 << "\n";
 
   PolyBdInputReader<RealPolynomialBound> basinReader("basin.in");
   basin = basinReader.polyBd;
 
-
   std::cout << "basin of attraction=\n" << basin << "\n";
 
+  //adds dummy interval on zeroth coordinate (anyway it is constant)
+  basin[Index1D(0)] = Interval(-1.,1.);
 
   ss << "DBCPModelHetConProof_";
-  DPDEInclusionCW3 diffIncl(m, dftPts, M, dftPts2, PI, nu, order, step, MaxNorm());
   ss  << "nu_" << rightBound(nu);
 
   if(approach == 0)
@@ -360,58 +399,123 @@ void integrate(int approach){
   log << "Taylor method order=" << order << ", constant time step=" << step << "\n";
   log << "Galerkin projection dimension m=" << m << ", M_{FFT}=" << dftPts << "\n";
   log << "the whole infinite dimensional system is being integrated (the Lohner algorithm for differential inclusions is used).\n";
-  if(approach == 0){
-    diffIncl.getDynamicalSystem().setJetDynSysAlgorithmType(capd::jaco::direct);
-    log << "Using the direct approach\n";
-  }else{
-    if(approach == 1){
-      diffIncl.getDynamicalSystem().setJetDynSysAlgorithmType(capd::jaco::FFT);
-      log << "Using the FFT approach\n";
-    }else{
-      diffIncl.getDynamicalSystem().setJetDynSysAlgorithmType(capd::jaco::FFTButFirstOrderDirect);
-      log << "Using the FFT approach, but the first order normalized derivative is calculated directly to avoid a blowup\n";
-    }
-  }
-
   log << "initial condition (infinite dimensional):\n" << u_0 << "\nitegration started, the output below is the Galerkin projection of the set at each timestep\n";
   int i;
-  //  //end init mo
-  InclRect2Set set(u_0);
 
-  Interval max;
-
-  start = clock();
-  for(i=0; i < MAXSTEPS; ++i){
-//    std::cout << "step #" << i << " ";
-    set.move(diffIncl);
-    log << (IntervalVector)set << "\n";
-    if(i % 100 == 0){
-      log << "The set at time step #" << i << " ( h = " << step << " )\n";
-      log << set.getPerturbationParams() << "\n";
-      currentSet.open("current_set.out", std::ofstream::out);
-      std::stringstream ss;
-      ss << "current set step #" << i << " of the integration process";
-      printModes(ss.str().c_str(), currentSet, set.getPerturbationParams() );
-      currentSet.close();
-
-      if( set.getPerturbationParams().subset(basin) ){
-        log << "\nTHE CURRENT SET AT THE TIME STEP i=" << i << " IS WITHIN THE BASIN OF ATTRACTION.\n END OF INTEGRATION IN TIME PROCESS.\n";
-        break;
+  {
+    DPDEInclusionCW3 diffIncl(m, dftPts, M, dftPts2, PI, nu, order, step, MaxNorm());
+    if(approach == 0){
+      diffIncl.getDynamicalSystem().setJetDynSysAlgorithmType(capd::jaco::direct);
+      log << "Using the direct approach\n";
+    }else{
+      if(approach == 1){
+        diffIncl.getDynamicalSystem().setJetDynSysAlgorithmType(capd::jaco::FFT);
+        log << "Using the FFT approach\n";
+      }else{
+        diffIncl.getDynamicalSystem().setJetDynSysAlgorithmType(capd::jaco::FFTButFirstOrderDirect);
+        log << "Using the FFT approach, but the first order normalized derivative is calculated directly to avoid a blowup\n";
       }
     }
+    InclRect2Set set(u_0);
+
+    Interval max;
+
+    start = clock();
+    bool tailMWasIncreased = false;
+    for(i=0; i < MAXSTEPS; ++i){
+  //    std::cout << "step #" << i << " ";
+      set.move(diffIncl);
+      log << (IntervalVector)set << "\n";
+      if(i % 100 == 0){
+        log << "The set at time step #" << i << " ( h = " << step << " )\n";
+        log << set.getPerturbationParams() << "\n";
+        currentSet.open("current_set.out", std::ofstream::out);
+        std::stringstream ss;
+        ss << "current set step #" << i << " of the integration process";
+        printModes(ss.str().c_str(), currentSet, set.getPerturbationParams() );
+        currentSet.close();
+
+        if( subsetFinite(set.getPerturbationParams(), basin) ){
+          log << "\nthe finite part of the current set at the timestep i=" << i << " is within the basin of attraction.\n \n";
+          break;
+        }else{
+          noentry(set.getPerturbationParams(), basin, log);
+        }
+      }
+    }
+    if( i == MAXSTEPS ){
+      log << "\nTHE MAXIMAL NUMBER OF TIME STEPS REACHED BEFORE THE SET WAS INTEGRATED INTO THE BASIN OF ATTRACTION.\n";
+      log << "\nset at the end (infinite dimensional): " << set.getPerturbationParams() << "\n";
+      exit(1);
+    }
+
+    u_0 = set.getPerturbationParams();
   }
-  if( i == MAXSTEPS ){
-    log << "\nTHE MAXIMAL NUMBER OF TIME STEPS REACHED BEFORE THE SET WAS INTEGRATED INTO THE BASIN OF ATTRACTION.\n";
-    log << "\nset at the end (infinite dimensional): " << set.getPerturbationParams() << "\n";
+
+  //the tail part
+  //we increase M in order to get entry of the fartail
+  M = 200;
+  u_0.changeM(M, false);
+  log << "INCREASING M UPTO M=" << M << " IN ORDER TO OBTAIN THE FARTAIL ENTRY.\n";
+  {
+    DPDEInclusionCW3 diffIncl(m, dftPts, M, dftPts2, PI, nu, order, step, MaxNorm());
+    if(approach == 0){
+      diffIncl.getDynamicalSystem().setJetDynSysAlgorithmType(capd::jaco::direct);
+      log << "Using the direct approach\n";
+    }else{
+      if(approach == 1){
+        diffIncl.getDynamicalSystem().setJetDynSysAlgorithmType(capd::jaco::FFT);
+        log << "Using the FFT approach\n";
+      }else{
+        diffIncl.getDynamicalSystem().setJetDynSysAlgorithmType(capd::jaco::FFTButFirstOrderDirect);
+        log << "Using the FFT approach, but the first order normalized derivative is calculated directly to avoid a blowup\n";
+      }
+    }
+    InclRect2Set set(u_0);
+
+    Interval max;
+
+    start = clock();
+    bool tailMWasIncreased = false;
+    int breakStep = MAXSTEPS;
+    for( ; i < breakStep; ++i){
+  //    std::cout << "step #" << i << " ";
+      set.move(diffIncl);
+      log << (IntervalVector)set << "\n";
+      if(i % 100 == 0){
+        log << "The set at time step #" << i << " ( h = " << step << " )\n";
+        log << set.getPerturbationParams() << "\n";
+        currentSet.open("current_set.out", std::ofstream::out);
+        std::stringstream ss;
+        ss << "current set step #" << i << " of the integration process";
+        printModes(ss.str().c_str(), currentSet, set.getPerturbationParams() );
+        currentSet.close();
+
+        if( subsetFinite(set.getPerturbationParams(), basin) ){
+          log << "\nthe finite part of the current set at the timestep i=" << i << " is within the basin of attraction.\n \n";
+          breakStep = i + 10; //do 100 additional steps
+          log << "\nthe entry of the full set has been achieved, perforimg additional 10 timesteps for safety margin.\n";
+        }else{
+          noentry(set.getPerturbationParams(), basin, log);
+        }
+      }
+    }
+    if( i == MAXSTEPS ){
+      log << "\nTHE MAXIMAL NUMBER OF TIME STEPS REACHED BEFORE THE SET WAS INTEGRATED INTO THE BASIN OF ATTRACTION.\n";
+      log << "\nset at the end (infinite dimensional): " << set.getPerturbationParams() << "\n";
+    }
+
+    time ( &rawtime );
+    log << "End of the integration current local time is: " << ctime (&rawtime) << "\n";
+    calculateDiams((IntervalVector)set, max);
+    log << "max diameter of the set at the end: " << max << "\n";
+    end = clock();
+    log << "RRmultiplicationsSum=" << RRmultiplicationsSum << "\n";
+    log << "RRadditionsSum=" << RRadditionsSum << "\n";
   }
-  time ( &rawtime );
-  log << "End of the integration current local time is: " << ctime (&rawtime) << "\n";
-  calculateDiams((IntervalVector)set, max);
-  log << "max diameter of the set at the end: " << max << "\n";
-  end = clock();
-  log << "time: "<<(end-start)/CLOCKS_PER_SEC<<"\n";
-  log << "RRmultiplicationsSum=" << RRmultiplicationsSum << "\n";
-  log << "RRadditionsSum=" << RRadditionsSum << "\n";
+
+
+
 
 }
 
@@ -464,33 +568,43 @@ Interval calculateLogNorm(Box& Qbox, RealPolynomialBound& tail, IntervalVector& 
   }
 
 
-  IntervalVector sums( M ), conecond( M ), sumst( Qbox.m_n );
+  IntervalVector sums( M ), conecond( M ), sumst( Qbox.m_n ), lognorms(Qbox.m_n);
   Interval sumi, psum1, psum2;
 
 
-  int i = 38; //manually checked where is the smallest term on diagonal
-  sumi = 0.; psum1 = 0.; psum2 = 0.;
-  //the 1st component of the cone condition sum
-  for(int j=1; j < M + i; j++){ //this loop has to start from 1 , as we do not differentiate with resp to a_0 -- it is constant
-    if( i != j ){
-      if(j < Qbox.m_n)
-        sumi += iabs(dFtilde[i][j] + dFtilde[j][i]);
-      else{
-        for(int k=0; k < Qbox.m_n; k++){
-          psum1 += Qbox.m_Q[i][k] * ( r[ Index1D( abs(k-j) ) ]  +  rc[ Index1D( abs(k+j) ) ] ).re * k * k * jetDPDE.piOver_l * jetDPDE.piOver_l * jetDPDE.m_N_coeff.re * 3;
-        }
 
-        for(int k=0; k < Qbox.m_n; k++){
-          psum2 += Qbox.m_Qinv[k][i] * ( r[ Index1D( abs(j - k) ) ]  +  rc[ Index1D( abs(k + j) ) ] ).re * j * j * jetDPDE.piOver_l * jetDPDE.piOver_l * jetDPDE.m_N_coeff.re * 3;
+  for(int i = 0; i < Qbox.m_n; i++){ //iterate through coordinates, and calculate the log norm for each of the coordinates
+
+    sumi = 0.;
+    //the 1st component of the cone condition sum
+    for(int j=1; j < M + i; j++){ //this loop has to start from 1 , as we do not differentiate with resp to a_0 -- it is constant
+      if( i != j ){
+        if(j < Qbox.m_n)
+          sumi += iabs(dFtilde[i][j] + dFtilde[j][i]);
+        else{
+          psum1 = 0.; psum2 = 0.;
+          for(int k=0; k < Qbox.m_n; k++){
+            psum1 += Qbox.m_Q[i][k] * ( r[ Index1D( abs(k-j) ) ]  +  rc[ Index1D( abs(k+j) ) ] ).re * k * k * jetDPDE.piOver_l * jetDPDE.piOver_l * jetDPDE.m_N_coeff.re * 3;
+          }
+          for(int k=0; k < Qbox.m_n; k++){
+            psum2 += Qbox.m_Qinv[k][i] * ( r[ Index1D( abs(j - k) ) ]  +  rc[ Index1D( abs(k + j) ) ] ).re * j * j * jetDPDE.piOver_l * jetDPDE.piOver_l * jetDPDE.m_N_coeff.re * 3;
+          }
+          sumi += iabs( psum1 + psum2 );
+
         }
-        sumi += iabs( psum1 + psum2 );
       }
     }
+    std::cout << "sum" << i << "=" << sumi << "\n";
+    lognorms[i] = sumi + dFtilde[i][i];
   }
+  Interval min = -HUGE_VAL;
+  for(int i = 1; i < Qbox.m_n; i++){
+    if( lognorms[i] > min )
+      min = lognorms[i];
+  }
+  std::cout << "logNorms:\n" << lognorms << "\n";
 
-  Interval logNorm = sumi  + dFtilde[i][i];
-
-  return logNorm;
+  return min;
 
 }
 
@@ -550,6 +664,7 @@ void proveStableFixedPoint(){
 
   DOUBLE small = 1e-10;
   zeroCenteredBox = Interval(-small, small);
+  zeroCenteredBox[0] = 0.; //for k=0 we set 0 (it is constant mode)
 
   RealPolynomialBound tail(m, M, container), tr(m, M, container);
   setS ( tail, 6 );
@@ -578,9 +693,14 @@ void proveStableFixedPoint(){
 
   std::cout << "FevaluatedAtFP: " << FevaluatedAtFP << "\n";
 
-  finder.inflateTrappingRegion(Qbox, eigenvaluesRe, T, dfPoint, FevaluatedAtFP, std::cout , 23);
+  Interval logNorm = -1.;
+  Interval MAX_LOGNORM = -0.01; // maximal lognorm that we require from the isolating block
 
-  Interval logNorm = calculateLogNorm(Qbox, Qbox.getTail(), eigenvaluesRe, jetDPDE, std::cout);
+  //the last parameter number is the number of iterations of inflating the isolating block (choose manually
+  //according to the parameter)
+  finder.inflateTrappingRegion(Qbox, eigenvaluesRe, T, dfPoint, FevaluatedAtFP, std::cout , 35);
+  logNorm = calculateLogNorm(Qbox, Qbox.getTail(), eigenvaluesRe, jetDPDE, std::cout);
+
   if(logNorm < 0){
     std::cout << "logarithmic norm is NEGATIVE, logNorm =" << logNorm << "\n";
   }else{

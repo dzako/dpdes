@@ -2485,6 +2485,7 @@ public:
       ModesContainerType& W_2, bool& changedLastStep) {
 
     //23.10.2013 commented out, doesn't work ok for DPDE3 - keeps s(W_2) constant
+    //16.06.2016 fixed initial s  for tail validation to s(T)-1
     changeS(W_2, s(W_2) - this->m_p + this->m_r);
 
     /*RealType dL = investigate(step, x_0, W_2);
