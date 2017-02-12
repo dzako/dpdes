@@ -21,7 +21,7 @@ namespace jaco{
 class Dummy{
 public:
   Dummy(){
-    std::cout << "HRERERERE\n";
+    //std::cout << "HRERERERE\n";
   }
 };
 
@@ -71,8 +71,8 @@ public:
   /**IMPORTANT: This constructor is used to create a FINITE dimensional integrator (only projection is taken into account)   
    */
   FFTBasicDynSys(int m_, int dftPts_, RealType step_, int order_, RealType pi_, RealType nu_) :
-    dummy1(), EquationTaylorType(m_, dftPts_, nu_, pi_, order_), m(m_), dftPts(dftPts_), step(step_), order(order_), rhsSeries(m),
-  rhsFunctionSpace(dftPts_), td(m), tl(m), modes(order_ + 1), grids(order_ + 1), dummy2(), changeStepAdaptively(false){
+    EquationTaylorType(m_, dftPts_, nu_, pi_, order_), m(m_), dftPts(dftPts_), step(step_), order(order_), changeStepAdaptively(false),
+    rhsSeries(m), rhsFunctionSpace(dftPts_), td(m), tl(m), modes(order_ + 1), grids(order_ + 1), dummy1(), dummy2(){
 
     int i;
     for(i=0; i <= order; ++i){
@@ -84,8 +84,8 @@ public:
   /**IMPORTANT: This constructor is used to create a INFINITE dimensional integrator (only projection is taken into account)   
    */
   FFTBasicDynSys(int m_, int dftPts_, int M_, int dftPts2_, RealType step_, int order_, RealType pi_, RealType nu_, bool initializeHigherDFT = true) :
-  EquationTaylorType(m_, M_, dftPts_, dftPts2_, nu_, pi_, order, initializeHigherDFT), m(m_), dftPts(dftPts_), step(step_), order(order_), rhsSeries(m),
-  rhsFunctionSpace(dftPts_), td(m), tl(m), modes(order_+1, false), grids(order_+1, false), changeStepAdaptively(false){
+  EquationTaylorType(m_, M_, dftPts_, dftPts2_, nu_, pi_, order_, initializeHigherDFT), m(m_), dftPts(dftPts_), step(step_), order(order_), changeStepAdaptively(false),
+  rhsSeries(m), rhsFunctionSpace(dftPts_), td(m), tl(m), modes(order_+1, false), grids(order_+1, false){
     int i;
     for(i=0; i <= order; ++i){
       modes[i] = ModesContainerType(m);

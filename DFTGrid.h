@@ -394,7 +394,7 @@ public:
   }
 
   inline ComponentGrid& operator+=(const ComponentGrid& s){
-    int i, j;
+    int i;
     for(i=0; i < D; ++i){
       v[i] += s[i];
     }

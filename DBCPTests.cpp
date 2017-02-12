@@ -114,7 +114,6 @@ typedef capd::jaco::Burgers<RealPolynomialBound> Burgers;
 typedef capd::jaco::KS<RealPolynomialBound> KS;
 typedef capd::jaco::GL<RealPolynomialBound> GL;
 typedef capd::jaco::SH<RealPolynomialBound> SH;
-typedef capd::jaco::CH<RealPolynomialBound> CH;
 typedef capd::jaco::DBCP<RealPolynomialBound> DBCP;
 
 
@@ -165,10 +164,9 @@ typedef capd::jaco::DPDE3<DBCP_, JetFFT1D_, 0> JetSHDPDE_;
 
 
 //loads Polynomial Bounds from the specified file
-int loadDataFromFile(char* fileName, int* m, int* M, int* dftPts, int* dftPts2, int* order, double* step, double* nu, double* sigma, double* piOverL ){
+int loadDataFromFile(const char* fileName, int* m, int* M, int* dftPts, int* dftPts2, int* order, double* step, double* nu, double* sigma, double* piOverL ){
 
   FILE* file;
-  int r;
 
   if(!(file = fopen(fileName, "r"))) {
     std::cerr << "The specified file does not exists.\n";
@@ -176,7 +174,6 @@ int loadDataFromFile(char* fileName, int* m, int* M, int* dftPts, int* dftPts2, 
   }
 
   double test;
-  char string[100000];
 
   if(fscanf(file, "m=%d\n", m) <= 0) {
     std::cerr << "Input data file format error. Check if it has proper format.\n";
@@ -239,11 +236,11 @@ int loadDataFromFile(char* fileName, int* m, int* M, int* dftPts, int* dftPts2, 
 
   fclose(file);
   //end of reading data
-  return r;
+  return 1;
 }
 
 
-int loadApproximateFixedPoint(char* fileName, IntervalVector& fixedPoint){
+int loadApproximateFixedPoint(const char* fileName, IntervalVector& fixedPoint){
 
   FILE* file;
 

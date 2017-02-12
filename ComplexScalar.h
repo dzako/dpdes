@@ -14,7 +14,6 @@ namespace capd{
 namespace jaco{
 
 ///Box representation of complex intervals
-//TODO: dokładniejszy opis!!!
 template<typename ScalarT>
 class ComplexScalar{
 public:
@@ -163,6 +162,8 @@ public:
 
   ///returns a bound for the complex number norm
   inline ScalarType norm() const{
+    if(re == 0 || im == 0)
+      return this->normMax();
     return sqrt( ScalarType(2.) ) * this->normMax();
   }
 

@@ -716,7 +716,7 @@ FirstOrderJet<DerivativeT, D>* FirstOrderJet<DerivativeT, D>::buffer = 0;
 template<class DerivativeT, int D>
 bool FirstOrderJet<DerivativeT, D>::initialized = 0;
 
-///TODO: try iterators
+
 ///19.11.11 important change (The order here is very important, otherwise if one of the foj1, foj2 is the buffer then the val has to be calculated at the end,
 ///because otherwise the new value (wrong value) of val will be used in ksi calculations.
 template< class DerivativeT, int D>

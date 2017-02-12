@@ -30,7 +30,7 @@ public:
       std::cerr << "The specified file does not exists.\n";
       throw std::runtime_error("The specified file does not exists.\n");
     }
-    std::cout << "Using the following initial data (filename " << fileName << "): \n";
+    std::cout << "Using the following initial data (loaded from the file " << fileName << "): \n";
     if( fscanf(file, "%s\n", str) <= 0 ) {
       std::cerr << "error in input file string\n";
     }
@@ -40,7 +40,7 @@ public:
     if( fscanf(file, "M=%d\n", &M) <= 0 ) {
       std::cerr << "error in input file M\n";
     }
-    fscanf(file, "%s\n", &str);
+    int t = fscanf(file, "%s\n", str);
     if( strstr(str, "DPDEContainer=\n") != 0 ){
       std::cerr << "error in input file\n";
     }
@@ -77,15 +77,17 @@ public:
       }
       polyBd[IndexType(i)] = ComplexScalarType( ScalarType(leftRe, rightRe), ScalarType(leftIm, rightIm) );
     }
+    std::cout << "polyBd M=" << polyBd.M << "\n";
     //fscanf(file, "%s\n", &str);
     //if( strstr(str, "far_tail=\n") != 0 ){
     //  std::cerr << "error in input file far_tail=\n";
     //}
     BoundType Cleft, Cright;
     int s;
-    if( fscanf(file, "[%le,%le]\n", &Cleft, &Cright) <= 0 ){
+    if( fscanf(file, "[%lg,%lg]\n", &Cleft, &Cright) <= 0 ){
       std::cerr << "error in input file\n";
     }
+
     if( fscanf(file, "%d\n", &s) <= 0 ){
       std::cerr << "error in input file\n";
     }

@@ -618,9 +618,11 @@ public:
   ///ib-is the initial box enclosing the fixed point,
   ///t-is the tail of our box, we will verify if this tail is in fact isolating.
   BoxFinder(MultiMapT& mm, JetMultiMapT& jetMm ) :
-    m_multiMap(mm), m_dim(mm.dimension()), m_tailIn( mm.m ), m_tailOut( mm.m ) ,
-    m_tailInfiniteIn( mm.m, mm.M ), m_tailInfiniteOut( mm.m, mm.M ),
-    m_jetMultiMap( jetMm ) {
+    m_multiMap(mm), m_jetMultiMap( jetMm ),
+    m_tailIn( mm.m ), m_tailOut( mm.m ) ,
+    m_tailInfiniteIn( mm.m, mm.M ),
+    m_tailInfiniteOut( mm.m, mm.M ),
+    m_dim(mm.dimension()) {
   }
 
   ///Function finds an isolating tail for a given box. The result is box, an interval set satisfying C1, C2, C3 and C4a of
@@ -753,7 +755,7 @@ template <class MultiMapT, class JetMultiMapT, class DoubleT, int D_>
 bool BoxFinder<MultiMapT, JetMultiMapT, DoubleT, D_>::findIsolatingTail(VectorType& box, TailType& tail, std::ostream& out){
   int s_ = s(tail);
   TailType tailBak(tail);
-  int i, steps = 0, ss;
+  int i, steps = 0;
   TailType n(tail);
   ScalarType diff;
   bool isolation = false;
@@ -888,7 +890,7 @@ bool BoxFinder<MultiMapT, JetMultiMapT, DoubleT, D_>::inflateTrappingRegion(BoxT
     }
     else {
       potentialTR.setTail(tail);
-      std::cout << "potentialTR.\n " << box << "\ntrail:\n" << tail << "\n";
+      //out<< "potentialTR.\n " << box << "\ntrail:\n" << tail << "\n";
 
       if(!verifyIsolatingBlock(potentialTR, eigenvaluesRe, T, fp, FatFP)){ //there is no isolation on current box
 
@@ -920,7 +922,7 @@ bool BoxFinder<MultiMapT, JetMultiMapT, DoubleT, D_>::verifyIsolatingBlock(BoxTy
              m_tailInfiniteIn.copyTailPartFrom(Qbox.getTail());
              m_multiMap.perturbations(m_tailInfiniteIn, rest);///<Q_mF(x) (the rest which is not affected by change of coordinates and linearization)
 
-             /// !!!!!! 27.06 TODO DOROBIC HESIAN
+             /// TODO 27.06.16 add hessian
   VectorType sum = FatFP /*+ 0.5 * m_multiMap.hessian(boxMfp)*/ + rest,
              Qsum = Qbox.getQ() * sum;
 
@@ -934,7 +936,7 @@ bool BoxFinder<MultiMapT, JetMultiMapT, DoubleT, D_>::verifyIsolatingBlock(BoxTy
           a[i] += T[i][j] * Qbox[j];
       }
 
-      bool condition;
+      bool condition = false;
       int sign;
       if(eigenvaluesRe[i] < 0){
         condition = !((diff = eigenvaluesRe[i] * rightBound(Qbox[i]) + a[i] + Qsum[i]) < 0);
@@ -983,7 +985,7 @@ bool BoxFinder<MultiMapT, JetMultiMapT, DoubleT, D_>::verifyIsolatingBlock(BoxTy
           a[i - 1] += T[i - 1][j] * Qbox[j];
       }
 
-      bool condition;
+      bool condition = false;
       int sign;
       if(eigenvaluesRe[i] < 0){
         condition = !((diff = (eigenvaluesRe[i]) * rightBound(Qbox.radius(i)) + sqrt(power((a[i] + Qsum[i]), 2) + power((a[i - 1] + Qsum[i - 1]), 2))) < 0);
@@ -1082,6 +1084,7 @@ bool BoxFinder<MultiMapT, JetMultiMapT, DoubleT, D_>::validateBox(DoubleVectorTy
     VectorType& zeroCenteredBox, ///a zero centred box (box around fixed point - fixed point)
     BoxType& Qbox, TailType& tail, DoubleMatrixType& E, VectorType& eigenvaluesRe, MatrixType& T,
     VectorType& FevaluatedAtFP, std::ostream& out) {
+
 
   DoubleMatrixType bMatrix(m_dim, m_dim), dQ(m_dim, m_dim), dQinv(m_dim, m_dim), dS(m_dim, m_dim), dT(m_dim, m_dim), R(m_dim, m_dim), rVec(m_dim,
       m_dim), //real part of eigenvectors
@@ -1274,7 +1277,7 @@ bool BoxFinder<MultiMapT, JetMultiMapT, DoubleT, D_>::validateBox(DoubleVectorTy
         m_tailInfiniteIn.copyTailPartFrom(tail);
         m_multiMap.perturbations(m_tailInfiniteIn, rest);
 
-        /// !!!!!! 27.06 TODO DOROBIC HESIAN
+        /// TODO 27.06.16 add hessian
         sum = FevaluatedAtFP /*+ 0.5 * m_multiMap.hessian(boxMfp)*/ + rest;
         Qsum = Q * sum;
 #if __BOX_DEBUG__
@@ -1304,8 +1307,8 @@ bool BoxFinder<MultiMapT, JetMultiMapT, DoubleT, D_>::validateBox(DoubleVectorTy
 #endif
 
 
-            bool condition;
-            int sign;
+            bool condition = false;
+            int sign = 0;
             if(eigenvaluesRe[i] < 0){
               condition = !((diff = eigenvaluesRe[i] * rightBound(Qbox[i]) + a[i] + Qsum[i]) < 0);
               sign = -1;
@@ -1399,8 +1402,8 @@ bool BoxFinder<MultiMapT, JetMultiMapT, DoubleT, D_>::validateBox(DoubleVectorTy
                 + Qsum[i - 1]), 2))) << "\n";
 #endif
 
-            bool condition;
-            int sign;
+            bool condition =false;
+            int sign = 0;
             if(eigenvaluesRe[i] < 0){
               condition = !((diff = eigenvaluesRe[i] * rightBound(Qbox.radius(i)) + sqrt(power((a[i] + Qsum[i]), 2) + power((a[i - 1] + Qsum[i - 1]), 2))) < 0);
               sign = -1;
@@ -1447,7 +1450,7 @@ bool BoxFinder<MultiMapT, JetMultiMapT, DoubleT, D_>::validateBox(DoubleVectorTy
           m_tailInfiniteIn.copyTailPartFrom(tail);
           m_multiMap.perturbations(m_tailInfiniteIn, rest);
 
-          /// !!!!!! 27.06 TODO DOROBIC HESIAN
+          /// TODO 27.06.16 add hessian
           sum = FevaluatedAtFP /*+ 0.5 * m_multiMap.hessian(boxMfp)*/ + rest;
           Qsum = Q * sum;
         }
@@ -1462,7 +1465,6 @@ bool BoxFinder<MultiMapT, JetMultiMapT, DoubleT, D_>::validateBox(DoubleVectorTy
   }
 
 
-std::cout << "lsteps=" << lsteps << "\n";
 
 //TWO refinement steps
 for(refinementSteps=0; refinementSteps < 1; refinementSteps++){ // TODO TURNED OFF
@@ -1481,7 +1483,7 @@ for(refinementSteps=0; refinementSteps < 1; refinementSteps++){ // TODO TURNED O
   m_multiMap.perturbations(m_tailInfiniteIn, rest);
 
 
-  /// !!!!!! 27.06 TODO DOROBIC HESIAN
+  /// TODO 27.06.16 add hessian
   sum = FevaluatedAtFP /*+ 0.5 * m_multiMap.hessian(boxMfp)*/ + rest;
   Qsum = Q * sum;
 #if __BOX_DEBUG__
@@ -1511,7 +1513,7 @@ for(refinementSteps=0; refinementSteps < 1; refinementSteps++){ // TODO TURNED O
       out << "\neigenvalues[" << i << "]*rightBound(Qbox[" << i << "])=" << eigenvaluesRe[i] * rightBound(Qbox[i]) << "\n";
 #endif
 
-      bool condition;
+      bool condition = false;
       int sign;
       if(eigenvaluesRe[i] < 0){
         condition = !((diff = eigenvaluesRe[i] * rightBound(Qbox[i]) + a[i] + Qsum[i]) < 0);
@@ -1597,7 +1599,7 @@ for(refinementSteps=0; refinementSteps < 1; refinementSteps++){ // TODO TURNED O
           + Qsum[i - 1]), 2))) << "\n";
 #endif
 
-      bool condition;
+      bool condition = false;
       int sign;
       if(eigenvaluesRe[i] < 0){
         condition = !((diff = eigenvaluesRe[i] * rightBound(Qbox.radius(i)) + sqrt(power((a[i] + Qsum[i]), 2) + power((a[i - 1] + Qsum[i - 1]), 2))) < 0);
@@ -1645,7 +1647,7 @@ for(refinementSteps=0; refinementSteps < 1; refinementSteps++){ // TODO TURNED O
     m_tailInfiniteIn.copyTailPartFrom(tail);
     m_multiMap.perturbations(m_tailInfiniteIn, rest);
 
-    /// !!!!!! 27.06 TODO DOROBIC HESIAN
+    /// TODO 27.06.16 add hessian
     sum = FevaluatedAtFP /*+ 0.5 * m_multiMap.hessian(boxMfp)*/ + rest;
     Qsum = Q * sum;
   }

@@ -813,273 +813,271 @@ public:
   using SubspaceType::array2modeIndex;
 };
 
-///the Cahn-Hillard dPDE
-template<class PolyBdT>
-class CH: public PolyBdT::SubspaceType, public capd::jaco::DPDEDefinition<
-    PolyBdT> {
-public:
-  typedef PolyBdT PolyBdType;
-  typedef typename PolyBdType::SubspaceType SubspaceType;
-  typedef typename PolyBdType::ComplexScalarType ComplexType;
-  typedef typename PolyBdType::RealType RealType;
-  typedef typename PolyBdType::IndexType IndexType;
+/////the Cahn-Hillard dPDE
+//template<class PolyBdT>
+//class CH: public PolyBdT::SubspaceType, public capd::jaco::DPDEDefinition<
+//    PolyBdT> {
+//public:
+//  typedef PolyBdT PolyBdType;
+//  typedef typename PolyBdType::SubspaceType SubspaceType;
+//  typedef typename PolyBdType::ComplexScalarType ComplexType;
+//  typedef typename PolyBdType::RealType RealType;
+//  typedef typename PolyBdType::IndexType IndexType;
+//
+//  RealType nu;
+//  int m_p;
+//  int m_d;
+//  int m_r;
+//  int m_sufficientlyLarge;
+//  int m_factorMaxM;
+//  ComplexType m_N_coeff;
+//  double S_DISSIPATIVE;
+//  RealType piOver_l; //TODO: temporary - should be defined by boundary conditions
+//
+//  CH(RealType nu_) :
+//      nu(nu_), S_DISSIPATIVE(-0.01) {
+//    m_p = 4.;
+//    m_d = 1.;
+//    m_r = 2.;
+//    m_sufficientlyLarge = m_d + m_p + 1;
+//    m_N_coeff = -nu;
+//    piOver_l = 1.;
+//    m_factorMaxM = 10;
+//  }
+//
+//  CH(int m, int M, RealType nu_) :
+//      SubspaceType(m, M), nu(nu_), S_DISSIPATIVE(-0.01) {
+//    m_p = 4.;
+//    m_d = 1.;
+//    m_r = 2.;
+//    m_sufficientlyLarge = m_d + m_p + 1;
+//    m_N_coeff = -nu;
+//    piOver_l = 1.;
+//    m_factorMaxM = 10;
+//  }
+//
+//  RealType ni(int k) const {
+//    IndexType j = array2modeIndex(k);
+//    RealType sqN = j.squareEuclNorm() * piOver_l * piOver_l * piOver_l
+//        * piOver_l;
+//    return (j.isZero() ? 0 : 1 - nu / sqN);
+//  }
+//
+//  RealType ni(const IndexType& k) const {
+//    RealType sqN = k.squareEuclNorm() * piOver_l * piOver_l * piOver_l
+//        * piOver_l;
+//    return (k.isZero() ? 0 : 1 - nu / sqN);
+//  }
+//
+//  const ComplexType& Ncoeff() const {
+//    return m_N_coeff;
+//  }
+//
+//  bool isDissipative(int k) {
+//    if (lambda(k) < S_DISSIPATIVE) {
+//      return true;
+//    }
+//    return false;
+//  }
+//
+//  ///i is position in an array of a mode.
+//  RealType lambda(int i) const {
+//    IndexType j = array2modeIndex(i);
+//    RealType sqN = j.squareEuclNorm() * piOver_l * piOver_l;
+//    return -sqN * (sqN - nu);
+//  }
+//
+//  ///k is the index of mode, lambda_k from the paper.
+//  RealType lambda_k(int k) const {
+//    return -k * k * piOver_l * piOver_l * (k * k * piOver_l * piOver_l - nu);
+//  }
+//
+//  RealType lambda_k(const IndexType& k) const {
+//    RealType sqN = k.squareEuclNorm() * piOver_l * piOver_l;
+//    return -sqN * (sqN - nu);
+//  }
+//
+//  ComplexType getNCoeff() const {
+//    return Ncoeff;
+//  }
+//
+//  //TODO: this functions below are implemented provisionally
+//  ///Returns V(K)=\{ \inf{v(|k|} | |k|>=K} \}, see definition of dissipative PDE in the paper.
+//  ///Eigenvalues of a dPDE satisfies \lambda_k=-\nu(|k|)|k|^p .
+//  RealType V(int K) const {
+//    return leftBound(ni(K));
+//  }
+//
+//  RealType V(const IndexType& k) const {
+//    return leftBound(ni(k));
+//  }
+//
+//  /**returns smallest integer K larger than k, such that f(i) is monotonously non increasing function for all i>K.
+//   * Where f(i) = e^{h\lambda_k} k^r
+//   */
+//  //TODO: different for this equation
+//  int maximumPoint(const RealType& h, int r, int k) const {
+//    if (-4 * rightBound(h) * k * k * k * k + 4 * rightBound(h) * k * k + r <= 0
+//        && k * k >= 0.5) {
+//      return k;
+//    } else {
+//      int c = k;
+//      while (!(-4 * rightBound(h) * c * c * c * c + 4 * rightBound(h) * c * c
+//          + r <= 0 && c * c >= 0.5)) {
+//        c++;
+//      }
+//      return c;
+//    }
+//  }
+//  using SubspaceType::array2modeIndex;
+//};
 
-  RealType nu;
-  int m_p;
-  int m_d;
-  int m_r;
-  int m_sufficientlyLarge;
-  int m_factorMaxM;
-  ComplexType m_N_coeff;
-  double S_DISSIPATIVE;
-  RealType piOver_l; //TODO: temporary - should be defined by boundary conditions
-
-  CH(RealType nu_) :
-      nu(nu_), S_DISSIPATIVE(-0.01) {
-    m_p = 4.;
-    m_d = 1.;
-    m_r = 2.;
-    m_sufficientlyLarge = m_d + m_p + 1;
-    m_N_coeff = -nu;
-    piOver_l = 1.;
-    m_factorMaxM = 10;
-  }
-
-  CH(int m, int M, RealType nu_) :
-      SubspaceType(m, M), nu(nu_), S_DISSIPATIVE(-0.01) {
-    m_p = 4.;
-    m_d = 1.;
-    m_r = 2.;
-    m_sufficientlyLarge = m_d + m_p + 1;
-    m_N_coeff = -nu;
-    piOver_l = 1.;
-    m_factorMaxM = 10;
-  }
-
-  RealType ni(int k) const {
-    IndexType j = array2modeIndex(k);
-    RealType sqN = j.squareEuclNorm() * piOver_l * piOver_l * piOver_l
-        * piOver_l;
-    return (j.isZero() ? 0 : 1 - nu / sqN);
-  }
-
-  RealType ni(const IndexType& k) const {
-    RealType sqN = k.squareEuclNorm() * piOver_l * piOver_l * piOver_l
-        * piOver_l;
-    return (k.isZero() ? 0 : 1 - nu / sqN);
-  }
-
-  const ComplexType& Ncoeff() const {
-    return m_N_coeff;
-  }
-
-  bool isDissipative(int k) {
-    if (lambda(k) < S_DISSIPATIVE) {
-      return true;
-    }
-    return false;
-  }
-
-  ///i is position in an array of a mode.
-  RealType lambda(int i) const {
-    IndexType j = array2modeIndex(i);
-    RealType sqN = j.squareEuclNorm() * piOver_l * piOver_l;
-    return -sqN * (sqN - nu);
-  }
-
-  ///k is the index of mode, lambda_k from the paper.
-  RealType lambda_k(int k) const {
-    return -k * k * piOver_l * piOver_l * (k * k * piOver_l * piOver_l - nu);
-  }
-
-  RealType lambda_k(const IndexType& k) const {
-    RealType sqN = k.squareEuclNorm() * piOver_l * piOver_l;
-    return -sqN * (sqN - nu);
-  }
-
-  ComplexType getNCoeff() const {
-    return Ncoeff;
-  }
-
-  //TODO: this functions below are implemented provisionally
-
-  ///Returns V(K)=\{ \inf{v(|k|} | |k|>=K} \}, see definition of dissipative PDE in the paper.
-  ///Eigenvalues of a dPDE satisfies \lambda_k=-\nu(|k|)|k|^p .
-  RealType V(int K) const {
-    return leftBound(ni(K));
-  }
-
-  RealType V(const IndexType& k) const {
-    return leftBound(ni(k));
-  }
-
-  /**returns smallest integer K larger than k, such that f(i) is monotonously non increasing function for all i>K.
-   * Where f(i) = e^{h\lambda_k} k^r
-   */
-  //TODO: different for this equation
-  int maximumPoint(const RealType& h, int r, int k) const {
-    if (-4 * rightBound(h) * k * k * k * k + 4 * rightBound(h) * k * k + r <= 0
-        && k * k >= 0.5) {
-      return k;
-    } else {
-      int c = k;
-      while (!(-4 * rightBound(h) * c * c * c * c + 4 * rightBound(h) * c * c
-          + r <= 0 && c * c >= 0.5)) {
-        c++;
-      }
-      return c;
-    }
-  }
-  using SubspaceType::array2modeIndex;
-};
 
 
+///the FitzHugh-Nagumo PDE
 #define _EPSILON_  0.01
 #define _A_ 0.1
 #define _L_CONST_ _A_
 #define _GAMMA_ 5.
 #define _NU_ 0.049087385212340519350978
-
-
-///the FitzHugh-Nagumo PDE
-template<class PolyBdT>
-class FN: public PolyBdT::SubspaceType, public capd::jaco::DPDEDefinition<
-    PolyBdT> {
-public:
-  typedef PolyBdT PolyBdType;
-  typedef typename PolyBdType::SubspaceType SubspaceType;
-  typedef typename PolyBdType::ComplexScalarType ComplexType;
-  typedef typename PolyBdType::RealType RealType;
-  typedef typename PolyBdType::IndexType IndexType;
-
-  RealType nu;
-  int m_p;
-  int m_d;
-  int m_r;
-  int m_sufficientlyLarge;
-  int m_factorMaxM;
-  int mhalf;
-  ComplexType m_N_coeff;
-  double S_DISSIPATIVE;
-  RealType piOver_l;
-
-  FN(RealType nu_) :
-      nu(nu_), S_DISSIPATIVE(-0.01), piOver_l(1.) {
-    m_p = 2.;
-    m_d = 1.;
-    m_r = 0.;
-    m_sufficientlyLarge = m_d + m_p + 1;
-    m_N_coeff = -1.;
-    m_factorMaxM = 10;
-    uproject = true;
-  }
-
-  FN(int m, int M, RealType nu_) :
-      SubspaceType(m, M), nu(nu_), S_DISSIPATIVE(-0.01), piOver_l(1.) {
-
-    if( m % 2 == 0 || M % 2 == 0 ){
-      std::cerr << "For FitzHugh-Nagumo m (" << m << ") and M (" << M <<") has to be ODD (there are 0...m modes for u, and 0...m modes for v).\n";
-      exit(1);
-    }
-    mhalf = m / 2;
-    m_p = 2.;
-    m_d = 1.;
-    m_r = 0.;
-    m_sufficientlyLarge = m_d + m_p + 1;
-    m_N_coeff = -1.;
-    m_factorMaxM = 10;
-    uproject = true;
-  }
-
-  RealType ni(int k) const {
-    IndexType j = array2modeIndex(k);
-
-    double sqN = j.squareEuclNorm();
-    return - nu + _L_CONST_ / sqN;
-
-  }
-
-  RealType ni(const IndexType& k) const {
-    double sqN = k.squareEuclNorm();
-
-    return - nu + _L_CONST_ / sqN;
-  }
-
-  const ComplexType& Ncoeff() const {
-    return m_N_coeff;
-  }
-
-  bool isDissipative(int k) {
-    if (lambda(k) < S_DISSIPATIVE) {
-      return true;
-    }
-    return false;
-  }
-
-  //lambda functions return a nonzero value only for first part of the vector (indexed 0...m)
-  //storing solutions first component (u), for the second part (component v) return 0.
-
-  ///i is position in an array of a mode.
-  RealType lambda(int i) const {
-    IndexType j = array2modeIndex(i);
-
-    if( j[0] <= mhalf ){
-      double sqN = j.squareEuclNorm();
-      return - nu * sqN + _L_CONST_;
-    }else{
-      return 0;
-    }
-  }
-
-  ///k is the index of mode, lambda_k from the paper.
-  RealType lambda_k(int k) const {
-    if ( k <= mhalf ){
-      return - nu * k * k + _L_CONST_;
-    }else{
-      return 0;
-    }
-  }
-
-  RealType lambda_k(const IndexType& k) const {
-    if( k[0] <= mhalf ){
-      double sqN = k.squareEuclNorm();
-      return - nu * sqN + _L_CONST_;
-    }else{
-      return 0;
-    }
-  }
-
-  ComplexType getNCoeff() const {
-    return Ncoeff;
-  }
-
-  ///Returns V(K)=\{ \inf{v(|k|} | |k|>=K} \}, see definition of dissipative PDE in the paper.
-  ///Eigenvalues of a dPDE satisfies \lambda_k=-\nu(|k|)|k|^p .
-  RealType V(int K) const {
-    return leftBound(ni(K));
-  }
-
-  RealType V(const IndexType& k) const {
-    return leftBound(ni(k));
-  }
-
-  /**TODO: Old version !!!
-   */
-  int maximumPoint(const RealType& h, int r, int k) const {
-    if (-4 * rightBound(h) * k * k * k * k + 4 * rightBound(h) * k * k + r <= 0
-        && k * k >= 0.5) {
-      return k;
-    } else {
-      int c = k;
-      while (!(-4 * rightBound(h) * c * c * c * c + 4 * rightBound(h) * c * c + r <= 0 && c * c >= 0.5)) {
-        c++;
-      }
-      return c;
-    }
-  }
-  using SubspaceType::array2modeIndex;
-  using DPDEDefinition<PolyBdT>::uproject;
-};
+//template<class PolyBdT>
+//class FN: public PolyBdT::SubspaceType, public capd::jaco::DPDEDefinition<
+//    PolyBdT> {
+//public:
+//  typedef PolyBdT PolyBdType;
+//  typedef typename PolyBdType::SubspaceType SubspaceType;
+//  typedef typename PolyBdType::ComplexScalarType ComplexType;
+//  typedef typename PolyBdType::RealType RealType;
+//  typedef typename PolyBdType::IndexType IndexType;
+//
+//  RealType nu;
+//  int m_p;
+//  int m_d;
+//  int m_r;
+//  int m_sufficientlyLarge;
+//  int m_factorMaxM;
+//  int mhalf;
+//  ComplexType m_N_coeff;
+//  double S_DISSIPATIVE;
+//  RealType piOver_l;
+//
+//  FN(RealType nu_) :
+//      nu(nu_), S_DISSIPATIVE(-0.01), piOver_l(1.) {
+//    m_p = 2.;
+//    m_d = 1.;
+//    m_r = 0.;
+//    m_sufficientlyLarge = m_d + m_p + 1;
+//    m_N_coeff = -1.;
+//    m_factorMaxM = 10;
+//    uproject = true;
+//  }
+//
+//  FN(int m, int M, RealType nu_) :
+//      SubspaceType(m, M), nu(nu_), S_DISSIPATIVE(-0.01), piOver_l(1.) {
+//
+//    if( m % 2 == 0 || M % 2 == 0 ){
+//      std::cerr << "For FitzHugh-Nagumo m (" << m << ") and M (" << M <<") has to be ODD (there are 0...m modes for u, and 0...m modes for v).\n";
+//      exit(1);
+//    }
+//    mhalf = m / 2;
+//    m_p = 2.;
+//    m_d = 1.;
+//    m_r = 0.;
+//    m_sufficientlyLarge = m_d + m_p + 1;
+//    m_N_coeff = -1.;
+//    m_factorMaxM = 10;
+//    uproject = true;
+//  }
+//
+//  RealType ni(int k) const {
+//    IndexType j = array2modeIndex(k);
+//
+//    double sqN = j.squareEuclNorm();
+//    return - nu + _L_CONST_ / sqN;
+//
+//  }
+//
+//  RealType ni(const IndexType& k) const {
+//    double sqN = k.squareEuclNorm();
+//
+//    return - nu + _L_CONST_ / sqN;
+//  }
+//
+//  const ComplexType& Ncoeff() const {
+//    return m_N_coeff;
+//  }
+//
+//  bool isDissipative(int k) {
+//    if (lambda(k) < S_DISSIPATIVE) {
+//      return true;
+//    }
+//    return false;
+//  }
+//
+//  //lambda functions return a nonzero value only for first part of the vector (indexed 0...m)
+//  //storing solutions first component (u), for the second part (component v) return 0.
+//
+//  ///i is position in an array of a mode.
+//  RealType lambda(int i) const {
+//    IndexType j = array2modeIndex(i);
+//
+//    if( j[0] <= mhalf ){
+//      double sqN = j.squareEuclNorm();
+//      return - nu * sqN + _L_CONST_;
+//    }else{
+//      return 0;
+//    }
+//  }
+//
+//  ///k is the index of mode, lambda_k from the paper.
+//  RealType lambda_k(int k) const {
+//    if ( k <= mhalf ){
+//      return - nu * k * k + _L_CONST_;
+//    }else{
+//      return 0;
+//    }
+//  }
+//
+//  RealType lambda_k(const IndexType& k) const {
+//    if( k[0] <= mhalf ){
+//      double sqN = k.squareEuclNorm();
+//      return - nu * sqN + _L_CONST_;
+//    }else{
+//      return 0;
+//    }
+//  }
+//
+//  ComplexType getNCoeff() const {
+//    return Ncoeff;
+//  }
+//
+//  ///Returns V(K)=\{ \inf{v(|k|} | |k|>=K} \}, see definition of dissipative PDE in the paper.
+//  ///Eigenvalues of a dPDE satisfies \lambda_k=-\nu(|k|)|k|^p .
+//  RealType V(int K) const {
+//    return leftBound(ni(K));
+//  }
+//
+//  RealType V(const IndexType& k) const {
+//    return leftBound(ni(k));
+//  }
+//
+//  /**TODO: Old version !!!
+//   */
+//  int maximumPoint(const RealType& h, int r, int k) const {
+//    if (-4 * rightBound(h) * k * k * k * k + 4 * rightBound(h) * k * k + r <= 0
+//        && k * k >= 0.5) {
+//      return k;
+//    } else {
+//      int c = k;
+//      while (!(-4 * rightBound(h) * c * c * c * c + 4 * rightBound(h) * c * c + r <= 0 && c * c >= 0.5)) {
+//        c++;
+//      }
+//      return c;
+//    }
+//  }
+//  using SubspaceType::array2modeIndex;
+//  using DPDEDefinition<PolyBdT>::uproject;
+//};
 
 
 
@@ -1103,7 +1101,7 @@ public:
   int m_factorMaxM;
   ComplexType m_N_coeff;
   double S_DISSIPATIVE;
-  RealType piOver_l; //TODO: temporary - should be defined by boundary conditions
+  RealType piOver_l;
 
   DBCP(RealType nu_) :
       nu(nu_), S_DISSIPATIVE(-0.01) {
@@ -1315,22 +1313,19 @@ public:
             "The is no code implemented for the provided norms ( |.|_v and |.|_n)");
       }
     }
-    std::cout << "VNorm=" << typeid(VNormType).name() << ", NNorm="
-        << typeid(typename FFTType::IndexRangeType::NormType).name() << "\n";
-    std::cout << "w1 = " << w1 << ", w2 = " << w2 << ", w3 = " << w3 << "\n";
   }
 
   /**The constructor for FINITE dimensional integrator - only the projection is taken into account
    */
   DPDE2(int m_, int dftPts1_, RealType nu_, RealType pi_, int order) :
-      EquationType(m_, m_, nu_), m(m_), dftPts1(dftPts1_), dftPts(dftPts1), fft1(
-          m, dftPts1, pi_), ir_m(IndexType::zero()), ir_M(IndexType::zero()), tpb(
-          m_, m_), tg1(dftPts1), tg1_2(dftPts1), sdft(dftPts1), tmc(m), tmc2(m), tmc3(
-          m), empty(dftPts1), rhs(dftPts1), useFFT(false), td(m), tl(m), yc(
-          PolyBdType::modes2realArraySizeStatic(m_)), inflates(
-          PolyBdType::modes2realArraySizeStatic(m_), 1), forcing(
-          PolyBdType::modes2realArraySizeStatic(m_)), initializedHigherDFT(
-          false), pi(pi_) {
+      EquationType(m_, m_, nu_), m(m_), dftPts1(dftPts1_), dftPts(dftPts1),
+      fft1(m, dftPts1, pi_), ir_m(IndexType::zero()), ir_M(IndexType::zero()), tpb(m_, m_),
+          tg1(dftPts1), tg1_2(dftPts1), sdft(dftPts1), tmc(m), tmc2(m), tmc3(m),
+          empty(dftPts1), rhs(dftPts1), useFFT(false), td(m), tl(m),
+          yc(PolyBdType::modes2realArraySizeStatic(m_)),
+          forcing(PolyBdType::modes2realArraySizeStatic(m_)),
+          initializedHigherDFT(false), pi(pi_),
+          inflates(PolyBdType::modes2realArraySizeStatic(m_), 1){
     ir_m.setRange(0, strong, m, weak);
     initializeW(w, w_1, w_2, w_3);
   }
@@ -1352,15 +1347,14 @@ public:
           IndexType::zero()), m_Nt(m, M), m_bt(m, M), m_gt(m, M), tpb(m, M), tg1(
           dftPts1), tg2(dftPts2), tg3(dftPts3), tg1_2(dftPts1), tg2_2(dftPts2), tg3_2(
           dftPts3), tg1_3(dftPts1), tg2_3(dftPts2), tg3_3(dftPts3), sdft(
-          dftPts1), tmc(m), tmc2(m), delta_u(m, M, w), delta_v(m, M, w), mu(m,
+          dftPts1), tmc(m), tmc2(m), tmc3(m), delta_u(m, M, w), delta_v(m, M, w), mu(m,
           M, w), mv(m, M, w), r1(m, M, w), r_delta_u(dftPts3), r_abs_mu(
           dftPts3), r_delta_v(dftPts3), r_abs_mv(dftPts3), r_mu(dftPts3), r_mv(
-          dftPts3), s1(dftPts3), s2(dftPts3), s3(dftPts3), s4(dftPts3), tmc3(m), empty(
+          dftPts3), s1(dftPts3), s2(dftPts3), s3(dftPts3), s4(dftPts3), empty(
           dftPts1), rhs(dftPts1), useFFT(false), td(m), tl(m), yc(
-          PolyBdType::modes2realArraySizeStatic(m_)), inflates(
-          PolyBdType::modes2realArraySizeStatic(M_), 1), forcing(
+          PolyBdType::modes2realArraySizeStatic(m_)), forcing(
           PolyBdType::modes2realArraySizeStatic(m_)), initializedHigherDFT(
-          initializeHigherDFT), pi(pi_) {
+          initializeHigherDFT), pi(pi_), inflates(PolyBdType::modes2realArraySizeStatic(M_), 1) {
     if (initializeHigherDFT) {
       fft2 = FFTType(M, dftPts2, pi);
       fft3 = FFTType((w + 1) * M, dftPts3, pi);
@@ -1897,7 +1891,7 @@ public:
     } else {
       if (index.d() == 2) {
         int s_ = (s1 > s2 ? s2 : s1), //min(sa, sb)
-            sm = (s1 > s2 ? s1 : s2), k = w * M + 1; //max(sa, sb); //TODO: check this
+            sm = (s1 > s2 ? s1 : s2), k = w * M + 1; //max(sa, sb); //TODO: check this (2d convolutions)
         RealType A = pb1.sumOfNorms(), B = pb2.sumOfNorms();
         IndexRangeType range;
         range.setK_1Range(w_3 * M, weak, -1, weak);
@@ -2006,7 +2000,7 @@ public:
 
   /**This function performs FFT transform, which is overestimations optimized. In order to reduce overestimations more fft's are required, therefore more parameters are required.
    *
-   * TODO: URGENT optimize this - where temporary variables should be? mu, delta_u etc...
+   * TODO: optimize this - where temporary variables should be? mu, delta_u etc...
    */
   inline void transformOptimized(const ModesContainerType& u,
       const ModesContainerType& v, ModesContainerType& r, int aliasingRemoval =
@@ -2048,7 +2042,7 @@ public:
 
   /**This function performs FFT transform, which is overestimations optimized. In order to reduce overestimations more fft's are required, therefore more parameters are required.
    *
-   * TODO: URGENT optimize this - where temporary variables should be? mu, delta_u etc...
+   * TODO: optimize this - where temporary variables should be? mu, delta_u etc...
    */
   inline void transformOptimized(const ModesContainerType& u,
       ModesContainerType& r, int aliasingRemoval = padding) {
@@ -2260,7 +2254,6 @@ public:
           << "DPDE2.CalculateNonlinearTermDirectly - Forbidden call\nThe function for infinite-dimensional PolyBds is not implemented.\n";
       throw std::runtime_error(
           "DPDE2.CalculateNonlinearTermDirectly - Forbidden call\nThe function for infinite-dimensional PolyBds is not implemented.\n");
-      //TODO: fulfill this
       if (range != redundantRange)
         addBound(in1, in2, out);
       estimatePolynomialBoundForTheInfinitePart(in1, in2, out);
@@ -2588,7 +2581,7 @@ public:
     }
   }
 
-  ///TODO: should be checked if ModesContainerType is infinite dimensional
+
   bool updateT(const RealType& h, const PolyBdType& x_0, PolyBdType& W_2,
       const PolyBdType& gt_b, const RealType& newC, int& L, RealType& dL,
       bool& validated, bool& farTailValidate) {
@@ -2639,7 +2632,7 @@ public:
       ModesContainerType& W_2, bool& validate, bool& farTailValidate,
       RealType& guessedC, int& previousL, RealType& previousdL,
       bool& changedLastStep, bool& firstStep, bool& recalculateN) {
-    bool real, validated = true;
+    bool validated = true;
     int first = W_2.finiteTailBegin(), last = W_2.finiteTailEnd();
     int i;
     IndexType index, tindex;
@@ -3159,7 +3152,6 @@ public:
       ModesContainerType& rhsSeries) {
     int j, k;
     //case of third degree polynomial, two loops have to be used
-    //TODO: this is not optimized at all
     for (j = 0; j <= i; ++j) {
       for (k = 0; k <= j; ++k) {
 
@@ -3417,7 +3409,7 @@ public:
     out += r;
   }
 
-  //TODO: this is not working properly
+
   inline void CalculateNonlinearTermUsingFFT(const ModesContainerType& in,
       ModesContainerType& out) {
     if (!in.infiniteDimensional) {
@@ -3425,15 +3417,6 @@ public:
       tg1_2.multiply(tg1, tg1, tg1);
       fft1.fastInverseTransform(tg1_2, out);
     } else {
-      //TODO: this part is wrong
-      //estimating the polynomial bound for the product of three terms is problematic
-//       fftDebug.log = true;
-//       fft3.fastTransform(in, tg3, capd::jaco::none);
-//       addL2Bound(in, tg3);
-//       tg3_2.multiply(tg3, tg3, tg3);
-//       fft3.fastInverseTransform(tg3_2, out, capd::jaco::none);
-//       estimatePolynomialBoundForTheInfinitePart(in, out);
-//       fftDebug.log = false;
       std::cerr
           << "GLDPDE.CalculateNonlinearTermUsingFFT is not implemented.\n";
       throw std::runtime_error(
@@ -3553,7 +3536,7 @@ public:
       int range = full) {
     L(in, out);
     N(in, tmc, range);
-    std::cout << "in.n=" << in.n << " , out.n=" << out.n << " , tmc.n=" << tmc.n << "\n";
+
     out += tmc;
 
     out += yc; ///add y_c

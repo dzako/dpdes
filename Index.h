@@ -495,7 +495,6 @@ public:
     }
   }
 
-  ///TODO: verify this, 31.10.11 probably was error here not (ir.k[1]-k[1])>ir.kmk_1NormRight but (ir.k[1]-k[1])<-ir.kmk_1NormRight
   template<class IndexRangeT>
   inline bool limitReached(const IndexRangeT& ir){
     if(ir.k_1orKmk_1)

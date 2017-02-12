@@ -288,7 +288,6 @@ public:
     return *this;
   }
 
-  //TODO: IMPORTANT - this is exactly what the C++ predefined operator is doing
   //check if the C++ predefined operator is calling (DPDEContainer&)*this = (DPDEContainer&)hmc; 
   //and (SubspaceType&)*this = (SubspaceType&)hmc; 
   /*inline ComplexPolyBdJetOptimized& operator=(const ComplexPolyBdJetOptimized& hmc){

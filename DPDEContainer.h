@@ -36,6 +36,8 @@ public:
   DPDEContainer() : subspaceType(non), solutionType(complexValued), solutionType2(other), baseReZero(false), baseImZero(false), partialReReZero(false), 
                     partialReImZero(false), partialImReZero(false), partialImImZero(false){}
 
+  virtual ~DPDEContainer(){}
+
   inline int productSubspace(int subspace1, int subspace2) const{
     if(subspace1 == odd && subspace2 == odd)
       return even;

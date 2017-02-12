@@ -187,10 +187,10 @@ public:
     //important  warning about the aliasing error possibility
 
     if(! (n + 1 <= m/2)){
-      std::cerr << "ATTENTION! ALIASING ERROR WILL BE PRESENT! INCREASE m\n n="<<n<<", m="<<m<<"\n";
+      //std::cerr << "ATTENTION! ALIASING ERROR WILL BE PRESENT! INCREASE m\n n="<<n<<", m="<<m<<"\n";
     }
     if(n + 1 <= m/2 && 3*n >= m){
-      std::cerr << "Warning! Possible aliasing error, PHASE SHIFT ALIASING REMOVAL TECHNIQUE HAS TO BE USED\n n="<<n<<", m="<<m<<"\n";
+      //std::cerr << "There is a possible aliasing error, MAKE SURE THAT FFT IN THE CODE IS CALLED WITH PHASE SHIFTS\n n="<<n<<", m="<<m<<"\n";
     }
 
     W2[0][0] = 1.;
@@ -588,7 +588,7 @@ public:
           secondIndex = l + l_j + k*n_j*l_j;
           ///booleans firstIndex <= sth, secondIndex <= sth, etc... are here, because we want to calculate only half, and obtain
           ///the rest by the conjugacy condition.
-          ///TODO: works only for real valued solutions
+
           if(n_j == 2){
             r[secondIndex] = omegas[m_j * l] * r[secondIndex];
             smallTransform2(r[firstIndex], r[secondIndex], r[firstIndex], r[secondIndex],
@@ -1089,11 +1089,10 @@ public:
     }
   }
 
-  ///TODO: temporary functions, for debugging
+
   void printModes(const ModesContainerType& mc) const{
     IndexType index;
     IndexRangeType ir;
-    int j;
     ir.setRange(0, capd::jaco::strong, n, capd::jaco::weak);
 //    for(j=0; j < index.d(); ++j){
       for(index = firstModeIndex(ir); !index.limitReached(ir); index.inc(ir)) {
@@ -1606,7 +1605,6 @@ public:
   void printModes(const ModesContainerType& mc) const{
     IndexType index;
     IndexRangeType ir;
-    int j;
     ir.setRange(0, capd::jaco::strong, n, capd::jaco::weak);
 //    for(j=0; j < index.d(); ++j){
       for(index = firstModeIndex(ir); !index.limitReached(ir); index.inc(ir)) {

@@ -27,6 +27,12 @@
 
 #define __COUNT_OPERATIONS__ 0 ///if elementary operations should be counted
 
+//170205 added output configuration parameters
+#define __LATEX_OUT__ 0 //if polybd should be outputted in latex format
+#define __PRECISION__ 6 //decimals of precision
+const int __OUTPUT_MODES__ = 0; // 0 real part, 1 imaginary part, 2 both
+
+
 long long unsigned int RRmultiplicationsSum;
 long long unsigned int RRadditionsSum;
 long long unsigned int CCmultiplicationsSum;

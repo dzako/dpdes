@@ -10,6 +10,7 @@
 #include <time.h>
 #include <math.h>
 #include <stdlib.h>
+#include <iomanip>
 #include <cstring>
 
 #include <sstream>
@@ -22,7 +23,8 @@
 
 
 bool COUNT_OPERATIONS = false;
-#include "intervals/Interval.hpp" // for operations count
+//#include "intervals/Interval.hpp" // for operations count
+#include "capd/intervals/Interval.hpp"
 #define DOUBLE double
 
 #include "alglib/capd2alglib.h"
@@ -67,7 +69,6 @@ long long unsigned TOTAL_ITER;
 
 #include "ComplexScalar.h"
 #include "FirstOrderJet.h"
-#include "Odd.h"
 #include "Even.h"
 #include "Index.h"
 #include "Coefficients.h"
@@ -114,7 +115,6 @@ typedef capd::jaco::Burgers<RealPolynomialBound> Burgers;
 typedef capd::jaco::KS<RealPolynomialBound> KS;
 typedef capd::jaco::GL<RealPolynomialBound> GL;
 typedef capd::jaco::SH<RealPolynomialBound> SH;
-typedef capd::jaco::CH<RealPolynomialBound> CH;
 typedef capd::jaco::DBCP<RealPolynomialBound> DBCP;
 
 
@@ -181,18 +181,17 @@ void calculateDiams(const IntervalVector& v, Interval& maxD){
 
 
 //loads Polynomial Bounds from the specified file
-int loadDataFromFile(char* fileName, int* m, int* M, int* dftPts, int* dftPts2, int* order, double* step, double* nu, double* sigma, double* piOverL ){
+int loadDataFromFile(const char* fileName, int* m, int* M, int* dftPts, int* dftPts2, int* order, double* step, double* nu, double* sigma, double* piOverL ){
 
   FILE* file;
-  int r;
 
+  std::cout << "### loaded configuration ###\n";
   if(!(file = fopen(fileName, "r"))) {
     std::cerr << "The specified file does not exists.\n";
     throw std::runtime_error("The specified file does not exists.\n");
   }
 
   double test;
-  char string[100000];
 
   if(fscanf(file, "m=%d\n", m) <= 0) {
     std::cerr << "Input data file format error. Check if it has proper format.\n";
@@ -232,12 +231,12 @@ int loadDataFromFile(char* fileName, int* m, int* M, int* dftPts, int* dftPts2, 
   *step = test;
   std::cout  << "step=" << *step << "\n";
 
-  if(fscanf(file, "nu=%le\n", &test) <= 0) {
+  if(fscanf(file, "lambda=%le\n", &test) <= 0) {
     std::cerr << "Input data file format error. Check if it has proper format.\n";
     throw std::runtime_error("Input data file format error. Check if it has proper format.\n");
   }
   *nu = test;
-  std::cout  << "nu=" << *nu << "\n";
+  std::cout  << "lambda=" << *nu << "\n";
 
   if(fscanf(file, "sigma=%le\n", &test) <= 0) {
     std::cerr << "Input data file format error. Check if it has proper format.\n";
@@ -255,11 +254,11 @@ int loadDataFromFile(char* fileName, int* m, int* M, int* dftPts, int* dftPts2, 
 
   fclose(file);
   //end of reading data
-  return r;
+  return 1;
 }
 
 
-int loadApproximateFixedPoint(char* fileName, IntervalVector& fixedPoint){
+int loadApproximateFixedPoint(const char* fileName, IntervalVector& fixedPoint){
 
   FILE* file;
 
@@ -278,6 +277,7 @@ int loadApproximateFixedPoint(char* fileName, IntervalVector& fixedPoint){
   std::cout << "fixedPoint=\n" << fixedPoint << "\n";
 
   fclose(file);
+  return 1;
 }
 
 
@@ -293,6 +293,69 @@ std::ostream& printModes( const char* string, std::ostream& out, const RealPolyn
   out << pb.farTail.getC() << "\n";
   out << pb.farTail.getS() << "\n";
   return out;
+}
+
+bool verifyInclusionInProperCoordinates(int dim, const IntervalVector& rs, const IntervalVector& x0, const IntervalMatrix& Q, const IntervalMatrix& Qinv,
+    const InclRect2Set& set, capd::auxil::OutputStream& out){
+  IntervalVector x0hat, r0hat, rhat;
+  IntervalMatrix Bhat, Chat;
+
+  x0hat = set.get_x();
+  Chat = set.get_C();
+  r0hat = set.get_r0();
+  Bhat = set.get_B();
+  rhat = set.get_r();
+
+  RealPolynomialBound polybd = set.getPerturbationParams();
+
+  int hatdim = x0hat.size();
+
+  if(hatdim > dim){
+    std::cerr << "The integrated set dimension is larger that the fixed point basin dimension . Not implemented. \n";
+    throw std::runtime_error("The integrated set dimension is larger that the fixed point basin dimension . Not implemented. \n");
+  }
+
+  IntervalVector x0hatext(dim), r0hatext(dim), rhatext(dim);
+  IntervalMatrix Bhatext(dim, dim), Chatext(dim, dim);
+
+  int i,j;
+  for(i = 0; i < hatdim; i++){
+    x0hatext[i] = x0hat[i];
+    r0hatext[i] = r0hat[i];
+    rhatext[i] = rhat[i];
+    for(j = 0; j < hatdim; j++){
+      Bhatext[i][j] = Bhat[i][j];
+      Chatext[i][j] = Chat[i][j];
+    }
+  }
+
+  for(i = hatdim; i < dim; i++){
+    Bhatext[i][i] = 1;
+    Chatext[i][i] = 1;
+
+    x0hatext[i] = polybd[i].mid();
+    rhatext[i] = polybd[i] - polybd[i].mid();
+  }
+
+
+  IntervalVector x0diff       = Q*(x0 - x0hatext),
+                 QBhatrhat    = Q * Bhatext * rhatext + Q * Chatext * r0hatext;
+
+  //std::cout << "\nx0diff=\n" << x0diff << "\nQBhatrhat=\n" << QBhatrhat << "\nx0diff=\n" << x0diff << "\nrs=\n" << rs << "\n";
+  //std::cout << "\nBhatext=\n" << Bhatext << "\nChatext=\n" << Chatext << "\n";
+
+  bool r = true;
+  out << "\nChecking if entry is achieved in the correct coordinate system.\n";
+  for(i = 1; i < dim; i++){
+    if(!(QBhatrhat[i].subset(x0diff[i] + rs[i]))){
+      r = false;
+      out << "No entry on " << i << " coordinate.\n " << QBhatrhat[i] << " not subset of " << x0diff[i] << " + " << rs[i] << "\n" ;
+    }
+  }
+  out << "End of Checking entry (if empty then the entry is validated).\n";
+  return r;
+
+
 }
 
 bool subsetFinite(const RealPolynomialBound& pb1, const RealPolynomialBound& pb2){
@@ -338,6 +401,8 @@ void noentry(const RealPolynomialBound& pb1, const RealPolynomialBound& pb2, cap
 }
 
 
+
+
 void integrate(int approach){
 
   int m, /*change FOJ1D stack dimension*/ M, dftPts, dftPts2, order;
@@ -368,30 +433,25 @@ void integrate(int approach){
 
   RealPolynomialBound u_0(m, M, container), basin(m, M, container), enclosure(m);
 
+  std::cout << "u_0.M=" << u_0.M << "\n";
+
   PolyBdInputReader<RealPolynomialBound> inputReader("manifold.in");
   u_0 =  inputReader.polyBd;
 
   u_0.changeM(M, false);
 
-  std::cout << "Input polynomial bound=\n" << u_0 << "\n";
+  std::cout << "Input bounds for the set W0 being rigoroulsy integrated forw in time=\n" << u_0 << "\n";
 
   PolyBdInputReader<RealPolynomialBound> basinReader("basin.in");
   basin = basinReader.polyBd;
 
-  std::cout << "basin of attraction=\n" << basin << "\n";
+  std::cout << "Input bounds for the basin of attraction=\n" << basin << "\n";
 
   //adds dummy interval on zeroth coordinate (anyway it is constant)
   basin[Index1D(0)] = Interval(-1.,1.);
 
-  ss << "DBCPModelHetConProof_";
-  ss  << "nu_" << rightBound(nu);
+  ss << "integration_log.txt";
 
-  if(approach == 0)
-    ss << "_direct.txt";
-  if(approach == 1)
-    ss << "_fft.txt";
-  if(approach == 2)
-    ss << "_fftbutforddirect.txt";
   log.logfile(ss.str().c_str(), true); log.log = true;
   time_t rawtime;
   time ( &rawtime );
@@ -399,8 +459,87 @@ void integrate(int approach){
   log << "Taylor method order=" << order << ", constant time step=" << step << "\n";
   log << "Galerkin projection dimension m=" << m << ", M_{FFT}=" << dftPts << "\n";
   log << "the whole infinite dimensional system is being integrated (the Lohner algorithm for differential inclusions is used).\n";
-  log << "initial condition (infinite dimensional):\n" << u_0 << "\nitegration started, the output below is the Galerkin projection of the set at each timestep\n";
-  int i;
+  log << "initial condition is (infinite dimensional polynomial bounds):\n" << u_0 <<
+      "\nitegration started, the output below is the Galerkin projection of the set at each timestep\n";
+  std::cout << "The current local time is: " << ctime (&rawtime) << "\n";
+  std::cout << "Taylor method order=" << order << ", constant time step=" << step << "\n";
+  std::cout << "Galerkin projection dimension m=" << m << ", M_{FFT}=" << dftPts << "\n";
+  std::cout << "the whole infinite dimensional system is being integrated (the Lohner algorithm for differential inclusions is used).\n";
+  std::cout << "initial condition is (infinite dimensional polynomial bounds):\n" << u_0 <<
+      "\nitegration started, the output below is the Galerkin projection of the set at each timestep\n";
+
+  int i, j;
+
+
+
+  //load the basin inverse coordinates system
+
+  DOUBLE l,r;
+  FILE* qinv, *qfile, *x0file, *rfile;
+  if(!(qinv = fopen("Qinv.in", "r"))) {
+    std::cerr << "The file Qinv.in does not exists.\n";
+    throw std::runtime_error("The file Qinv.in does not exists.\n");
+  }
+  if(!(qfile = fopen("Q.in", "r"))) {
+    std::cerr << "The file Q.in does not exists.\n";
+    throw std::runtime_error("The file Q.in does not exists.\n");
+  }
+  if(!(x0file = fopen("x0.in", "r"))) {
+    std::cerr << "The file x0.in does not exists.\n";
+    throw std::runtime_error("The file x0.in does not exists.\n");
+  }
+  if(!(rfile = fopen("r.in", "r"))) {
+    std::cerr << "The file r.in does not exists.\n";
+    throw std::runtime_error("The file r.in does not exists.\n");
+  }
+
+  int dim;
+  int t = fscanf(qinv, "%d\n", &dim);
+  //std::cout << "read Qinv dim=" << dim << "\n";
+  IntervalMatrix Qinv(dim, dim);
+  for( i=0; i < dim; i++ ){
+    for( j=0; j < dim; j++ ){
+      t = fscanf(qinv, "[%le, %le] ", &l, &r);
+      Qinv[i][j] = Interval(l, r);
+    }
+  }
+  fclose(qinv);
+  //std::cout << "Qinv:\n" << Qinv << "\n";
+
+  t = fscanf(qfile, "%d\n", &dim);
+  //std::cout << "read Q dim=" << dim << "\n";
+  IntervalMatrix Q(dim, dim);
+  for( i=0; i < dim; i++ ){
+    for( j=0; j < dim; j++ ){
+      t = fscanf(qfile, "[%le, %le] ", &l, &r);
+      Q[i][j] = Interval(l, r);
+    }
+  }
+  fclose(qfile);
+  //std::cout << "Q:\n" << Q << "\n";
+
+
+  t = fscanf(x0file, "%d\n", &dim);
+  //std::cout << "read x0 dim=" << dim << "\n";
+  IntervalVector x0(dim);
+  for( i=0; i < dim; i++ ){
+    t = fscanf(x0file, "[%le, %le] ", &l, &r);
+    x0[i] = Interval(l, r);
+  }
+  fclose(x0file);
+  //std::cout << "x0:\n" << x0 << "\n";
+
+
+  t = fscanf(rfile, "%d\n", &dim);
+  //std::cout << "read r dim=" << dim << "\n";
+  IntervalVector rs(dim);
+  for( i=0; i < dim; i++ ){
+    t = fscanf(rfile, "[%le, %le] ", &l, &r);
+    rs[i] = Interval(l, r);
+  }
+  fclose(rfile);
+  //std::cout << "rs:\n" << rs << "\n";
+
 
   {
     DPDEInclusionCW3 diffIncl(m, dftPts, M, dftPts2, PI, nu, order, step, MaxNorm());
@@ -416,12 +555,14 @@ void integrate(int approach){
         log << "Using the FFT approach, but the first order normalized derivative is calculated directly to avoid a blowup\n";
       }
     }
+
+    log << "Below is the record of current bounds saved each 100 integration steps\n\n";
     InclRect2Set set(u_0);
 
     Interval max;
 
     start = clock();
-    bool tailMWasIncreased = false;
+
     for(i=0; i < MAXSTEPS; ++i){
   //    std::cout << "step #" << i << " ";
       set.move(diffIncl);
@@ -435,9 +576,15 @@ void integrate(int approach){
         printModes(ss.str().c_str(), currentSet, set.getPerturbationParams() );
         currentSet.close();
 
-        if( subsetFinite(set.getPerturbationParams(), basin) ){
-          log << "\nthe finite part of the current set at the timestep i=" << i << " is within the basin of attraction.\n \n";
+
+        bool vipcs = verifyInclusionInProperCoordinates(dim, rs, x0, Q, Qinv, set, log);
+        if( subsetFinite(set.getPerturbationParams(), basin) &&  vipcs ){
+          log << "\nthe FINITE PART of the current set at time t=" << i*step << " (timestep i=" << i << ") is within the basin of attraction.\n \n";
+          std::cout << "\nthe FINITE PART of the current set at time t=" << i*step << " (timestep i=" << i << ") is within the basin of attraction.\n \n";
           break;
+
+          //verifyInclusionInProperCoordinates(dim, rs, x0, Q, Qinv, set);
+
         }else{
           noentry(set.getPerturbationParams(), basin, log);
         }
@@ -445,18 +592,26 @@ void integrate(int approach){
     }
     if( i == MAXSTEPS ){
       log << "\nTHE MAXIMAL NUMBER OF TIME STEPS REACHED BEFORE THE SET WAS INTEGRATED INTO THE BASIN OF ATTRACTION.\n";
-      log << "\nset at the end (infinite dimensional): " << set.getPerturbationParams() << "\n";
+      log << "\nset at the end (infinite dimensional polynomial bounds): " << set.getPerturbationParams() << "\n";
+      std::cout << "\nTHE MAXIMAL NUMBER OF TIME STEPS REACHED BEFORE THE SET WAS INTEGRATED INTO THE BASIN OF ATTRACTION.\n";
+      std::cout << "\nset at the end (infinite dimensional polynomial bounds): " << set.getPerturbationParams() << "\n";
       exit(1);
     }
 
     u_0 = set.getPerturbationParams();
   }
 
+
+
+
+
+
   //the tail part
   //we increase M in order to get entry of the fartail
   M = 200;
   u_0.changeM(M, false);
-  log << "INCREASING M UPTO M=" << M << " IN ORDER TO OBTAIN THE FARTAIL ENTRY.\n";
+  log << "INCREASING THE FINITE TAIL DIMENSION UPTO M=" << M << " IN ORDER TO OBTAIN THE FARTAIL ENTRY.\n";
+  std::cout << "INCREASING THE FINITE TAIL DIMENSION UPTO M=" << M << " IN ORDER TO OBTAIN THE FARTAIL ENTRY.\n";
   {
     DPDEInclusionCW3 diffIncl(m, dftPts, M, dftPts2, PI, nu, order, step, MaxNorm());
     if(approach == 0){
@@ -476,12 +631,9 @@ void integrate(int approach){
     Interval max;
 
     start = clock();
-    bool tailMWasIncreased = false;
+
     int breakStep = MAXSTEPS;
     for( ; i < breakStep; ++i){
-  //    std::cout << "step #" << i << " ";
-      set.move(diffIncl);
-      log << (IntervalVector)set << "\n";
       if(i % 100 == 0){
         log << "The set at time step #" << i << " ( h = " << step << " )\n";
         log << set.getPerturbationParams() << "\n";
@@ -491,27 +643,48 @@ void integrate(int approach){
         printModes(ss.str().c_str(), currentSet, set.getPerturbationParams() );
         currentSet.close();
 
-        if( subsetFinite(set.getPerturbationParams(), basin) ){
-          log << "\nthe finite part of the current set at the timestep i=" << i << " is within the basin of attraction.\n \n";
-          breakStep = i + 10; //do 100 additional steps
-          log << "\nthe entry of the full set has been achieved, perforimg additional 10 timesteps for safety margin.\n";
+
+        bool vipcs = verifyInclusionInProperCoordinates(dim, rs, x0, Q, Qinv, set, log);
+        if( subset(set.getPerturbationParams(), basin) && vipcs ){
+          breakStep = i + 10; //do some additional steps to shrink the set more
+          log << "\nthe entry of the propagated W_0 bounds into the basin of attraction of the stable fixed point has been achieved at time T=" << i*step << " ," <<
+              ", integrating for additional 10 steps (for safety margin).\n";
+          std::cout << "\nthe entry of the propagated W_0 bounds into the basin of attraction of the stable fixed point has been achieved at time T=" << i*step << " ," <<
+              ", integrating for additional 10 steps (for safety margin).\n";
         }else{
           noentry(set.getPerturbationParams(), basin, log);
         }
       }
+      set.move(diffIncl);
+      log << (IntervalVector)set << "\n";
     }
     if( i == MAXSTEPS ){
       log << "\nTHE MAXIMAL NUMBER OF TIME STEPS REACHED BEFORE THE SET WAS INTEGRATED INTO THE BASIN OF ATTRACTION.\n";
-      log << "\nset at the end (infinite dimensional): " << set.getPerturbationParams() << "\n";
+      std::cout << "\nTHE MAXIMAL NUMBER OF TIME STEPS REACHED BEFORE THE SET WAS INTEGRATED INTO THE BASIN OF ATTRACTION.\n";
     }
+
+    bool vipcs = verifyInclusionInProperCoordinates(dim, rs, x0, Q, Qinv, set, log);
+    if( subset(set.getPerturbationParams(), basin) && vipcs ){
+      log << "\nTHE CURRENT INFINITE DIM POLYNOMIAL BOUNDS AT TIME T=" << i*step << " ARE WITHIN THE BASIN OF ATTRACTION OF THE STABLE FIXED POINT (STEP 3 OF THE PROOF SUCCEEDED).\n \n";
+      std::cout << "\nTHE CURRENT INFINITE DIM POLYNOMIAL BOUNDS AT TIME T=" << i*step << " ARE WITHIN THE BASIN OF ATTRACTION OF THE STABLE FIXED POINT (STEP 3 OF THE PROOF SUCCEEDED).\n \n";
+      log << "\nBOUNDS AT THE FINAL INTEGRATION STEP (infinite dimensional polynomial bounds):\n" << set.getPerturbationParams() << "\n";
+      std::cout << "\nBOUNDS AT THE FINAL INTEGRATION STEP (infinite dimensional polynomial bounds):\n" << set.getPerturbationParams() << "\n";
+    }else{
+      log << "THE CURRENT INFINITE DIM POLYNOMIAL BOUNDS AT STEP i=" << i << " ARE OUT OF THE BASIN OF ATTRACTION\n(was in, but then out after the additional 10 steps)\n\n";
+      std::cout << "THE CURRENT INFINITE DIM POLYNOMIAL BOUNDS AT STEP i=" << i << " ARE OUT OF THE BASIN OF ATTRACTION\n(was in, but then out after the additional 10 steps)\n\n";
+    }
+
+
+    //std::cout << "\nTHE FINAL SET x=" << set.get_x() << "\nTHE FINAL SET C=" << set.get_C() << "\nTHE FINAL SET r0=" << set.get_r0() << "\nTHE FINAL SET B=" <<
+    //    set.get_B() << "\nTHE FINAL SET r=" << set.get_r() << "\n";
 
     time ( &rawtime );
     log << "End of the integration current local time is: " << ctime (&rawtime) << "\n";
+    std::cout  << "End of the integration current local time is: " << ctime (&rawtime) << "\n";
     calculateDiams((IntervalVector)set, max);
     log << "max diameter of the set at the end: " << max << "\n";
+    std::cout  << "max diameter of the set at the end: " << max << "\n";
     end = clock();
-    log << "RRmultiplicationsSum=" << RRmultiplicationsSum << "\n";
-    log << "RRadditionsSum=" << RRadditionsSum << "\n";
   }
 
 
@@ -520,8 +693,10 @@ void integrate(int approach){
 }
 
 
+
+
 //calculates the logarithmic norm for the provided self-consistent bounds
-//todo: NOW IT IS DONE IN FINITE DIMENSION
+
 Interval calculateLogNorm(Box& Qbox, RealPolynomialBound& tail, IntervalVector& eigenvaluesRe, JetSHDPDE& jetDPDE, std::ostream& out){
 
   std::ofstream currentSet;
@@ -533,20 +708,14 @@ Interval calculateLogNorm(Box& Qbox, RealPolynomialBound& tail, IntervalVector& 
   jetDPDE.useFFT = false;
 
   IntervalMatrix jacobian = jetDPDE.jacobian( V );
-  int n = jacobian.numberOfRows();
-
 
   IntervalMatrix dFtilde = Qbox.m_Q * jacobian * Qbox.m_Qinv;
-
-  std::cout << "dFtilde:\n" << dFtilde << "\n";
-  std::cout << "mdisc:\n" << Qbox.m_disc << "\n";
-  std::cout << "eigenvaluesRe:\n" << eigenvaluesRe << "\n";
 
 
   int m, /*change FOJ1D stack dimension*/ M, dftPts, dftPts2, order;
   double step_, nu_, sigma_, piOverL_;
 
-  loadDataFromFile("config.in", &m, &M, &dftPts, &dftPts2, &order, &step_, &nu_, &sigma_, &piOverL_ );
+  loadDataFromFile("fixedpoint_config.in", &m, &M, &dftPts, &dftPts2, &order, &step_, &nu_, &sigma_, &piOverL_ );
 
   PartialDerivativePDE pdpde(m, M, dftPts, dftPts2, nu_, PI, order);
   pdpde.m_N_coeff = 1.;
@@ -594,7 +763,7 @@ Interval calculateLogNorm(Box& Qbox, RealPolynomialBound& tail, IntervalVector& 
         }
       }
     }
-    std::cout << "sum" << i << "=" << sumi << "\n";
+    //std::cout << "sum" << i << "=" << sumi << "\n";
     lognorms[i] = sumi + dFtilde[i][i];
   }
   Interval min = -HUGE_VAL;
@@ -602,7 +771,7 @@ Interval calculateLogNorm(Box& Qbox, RealPolynomialBound& tail, IntervalVector& 
     if( lognorms[i] > min )
       min = lognorms[i];
   }
-  std::cout << "logNorms:\n" << lognorms << "\n";
+  std::cout << "logarithmic norms computed for all coordinates (max over all coords excl 0th should be <0):\n" << lognorms << "\n\n";
 
   return min;
 
@@ -615,7 +784,7 @@ void proveStableFixedPoint(){
   Interval nu, step;
 
   std::ofstream currentSet;
-  loadDataFromFile("config.in", &m, &M, &dftPts, &dftPts2, &order, &step_, &nu_, &sigma_, &piOverL_ );
+  loadDataFromFile("fixedpoint_config.in", &m, &M, &dftPts, &dftPts2, &order, &step_, &nu_, &sigma_, &piOverL_ );
 
   step = step_;
   nu = nu_;
@@ -628,7 +797,6 @@ void proveStableFixedPoint(){
   for(i = 0; i < m + 1; i++)
     dfPoint[i] = rightBound( fixedPoint[i] );
 
-
   ///begin FOJ initialization for FFT integrator
   capd::jaco::DPDEContainer container;
   ///2.set here the subspace of the initial condition e.g. setToRealValuedOdd means that the initial condition is real valued odd
@@ -637,8 +805,6 @@ void proveStableFixedPoint(){
   FOJ1D_::initialize(ModesContainer_::modes2arraySizeStatic(m), container);
   ///end FOJ initialization
 
-  std::cout << "ModesContainer1D::modes2arraySizeStatic(m)=" << ModesContainer1D::modes2arraySizeStatic(m) << "\n";
-  std::cout << "ModesContainer1D::modes2arraySizeStatic(m)=" << ModesContainer_::modes2arraySizeStatic(m) << "\n";
 
   JetSHDPDE jetDPDE(m, dftPts, nu, PI, order);
 
@@ -661,7 +827,6 @@ void proveStableFixedPoint(){
 
   IntervalVector FevaluatedAtFP(m + 1);
 
-
   DOUBLE small = 1e-10;
   zeroCenteredBox = Interval(-small, small);
   zeroCenteredBox[0] = 0.; //for k=0 we set 0 (it is constant mode)
@@ -675,6 +840,7 @@ void proveStableFixedPoint(){
   RealPolynomialBound_ u( m ), f( m );
   DoubleVector delta( m + 1 ), dF( m + 1 );
   u = dfPoint;
+
   DoubleMatrix uJac = basicJetDpde.jacobian(u), uJacInv;
 
   basicDpde(u, f);
@@ -686,20 +852,21 @@ void proveStableFixedPoint(){
   basicDpde(u, f);
 
 
+  std::ofstream boxDebug("stable_box_log.txt");
+
   finder.validateBox(dfPoint, dJacobian,
       zeroCenteredBox, ///a zero centred box (box around fixed point - fixed point)
       Qbox, tail, E, eigenvaluesRe, T,
-      FevaluatedAtFP, std::cout);
+      FevaluatedAtFP, boxDebug);
 
   std::cout << "FevaluatedAtFP: " << FevaluatedAtFP << "\n";
 
   Interval logNorm = -1.;
-  Interval MAX_LOGNORM = -0.01; // maximal lognorm that we require from the isolating block
 
   //the last parameter number is the number of iterations of inflating the isolating block (choose manually
   //according to the parameter)
-  finder.inflateTrappingRegion(Qbox, eigenvaluesRe, T, dfPoint, FevaluatedAtFP, std::cout , 35);
-  logNorm = calculateLogNorm(Qbox, Qbox.getTail(), eigenvaluesRe, jetDPDE, std::cout);
+  finder.inflateTrappingRegion(Qbox, eigenvaluesRe, T, dfPoint, FevaluatedAtFP, boxDebug , 35);
+  logNorm = calculateLogNorm(Qbox, Qbox.getTail(), eigenvaluesRe, jetDPDE, boxDebug);
 
   if(logNorm < 0){
     std::cout << "logarithmic norm is NEGATIVE, logNorm =" << logNorm << "\n";
@@ -710,43 +877,64 @@ void proveStableFixedPoint(){
   //the found trapping region is in Q coordinates (diagonalizing the coordinate system at the fixed point)
   //we find a set given in canonical coordinates, which is contained in the trapping region in Q coordinates.
   IntervalVector Qwrap = Qbox.wrapAffine();
-  std::cout << "Qwrap:\n" << Qwrap << "\n";
-
-  const DOUBLE FACTOR = 1000;
-  IntervalVector v = ( Qbox.m_Qinv * Qbox.m_v ) / FACTOR;
-
-  //check if the box is inside the trapping region
-  IntervalVector t = Qbox.m_Q * v;
-
-  for(int i=0; i < t.size(); i++)
-    if( ! Qbox.m_v[i].contains( t[i] ) )
-      std::cout << "t[" << i << "] is not a subset of v[" << i << "] (" << t[i] << ", and " << Qbox.m_v[i] << "\n";
 
   tr = Qwrap;
   tr.copyTailPartFrom( Qbox.getTail() );
-  std::cout << "m_v:\n" << Qbox.m_v;
-  std::cout << "tail:\n" << tr;
+
+  std::cout << "The constructed basin of attraction of the stable fixed point (first " << n << " coordinates are given in eigenbasis Q  -- saved in Q.in file):\n" << tr;
+
+  boxDebug.close();
 
   std::ofstream basin;
+  basin << std::setprecision(18);
   basin.open("basin.in", std::ofstream::out);
   printModes("Proved_basin_of_attraction_of_the_stable_fixed_point:", basin, tr );
   basin.close();
 
+  //save Qinv matrix into a file
   std::ofstream qinv;
+  qinv << std::setprecision(18);
   qinv.open("Qinv.in", std::ofstream::out);
-
+  qinv << n << "\n";
   for(i = 0; i < n; i++)
     for(j = 0; j < n; j++){
       qinv << Qbox.m_Qinv[i][j] << " ";
     }
-
   qinv.close();
+
+  //save Q matrix into a file
+  std::ofstream q;
+  q << std::setprecision(18);
+  q.open("Q.in", std::ofstream::out);
+  q << n << "\n";
+  for(i = 0; i < n; i++)
+    for(j = 0; j < n; j++){
+      q << Qbox.m_Q[i][j] << " ";
+    }
+  q.close();
+
+  //save x_0 into a file
+  std::ofstream x0;
+  x0 << std::setprecision(18);
+  x0.open("x0.in", std::ofstream::out);
+  x0 << n << "\n";
+  for(i = 0; i < n; i++)
+    x0 << Qbox.m_x0[i] << " ";
+  x0.close();
+
+  //save r into a file
+  std::ofstream r;
+  r << std::setprecision(18);
+  r.open("r.in", std::ofstream::out);
+  r << n << "\n";
+  for(i = 0; i < n; i++)
+    r << Qbox.m_v[i] << " ";
+  r.close();
 
 }
 
 
 //verifies the cone condition in the provided self-consistent bounds
-//todo: NOW IT IS DONE IN FINITE DIMENSION
 bool verifyConeCondition(Box& Qbox, RealPolynomialBound& tail, IntervalVector& eigenvaluesRe, JetSHDPDE& jetDPDE, std::ostream& out){
 
   std::ofstream currentSet;
@@ -758,7 +946,6 @@ bool verifyConeCondition(Box& Qbox, RealPolynomialBound& tail, IntervalVector& e
   jetDPDE.useFFT = false;
 
   IntervalMatrix jacobian = jetDPDE.jacobian( V );
-  int n = jacobian.numberOfRows();
 
   RealPolynomialBound tr(tail);
   tr = Qbox.wrapAffine();
@@ -883,6 +1070,7 @@ bool verifyConeCondition(Box& Qbox, RealPolynomialBound& tail, IntervalVector& e
   }
 
   out << "conecond full vector: \n" << conecond << "\n";
+  std::cout << "conecond full vector: \n" << conecond << "\n";
 
   Interval min = 10000000000.;
   for(int i=0; i < M; i++){
@@ -890,7 +1078,8 @@ bool verifyConeCondition(Box& Qbox, RealPolynomialBound& tail, IntervalVector& e
       min = leftBound(conecond[i]);
   }
 
-  out << "CONE CONDITION EPSILON=" << min << "\n";
+  out << "CONE CONDITION EPSILON=" << min << "\n\n";
+  std::cout << "CONE CONDITION EPSILON=" << min << "\n\n";
 
   out.flush();
   //out << "sums: " << sums << "\n";
@@ -928,9 +1117,6 @@ void proveUnstableManifold(int direction){
   FOJ1D::initialize(ModesContainer1D::modes2arraySizeStatic(m), container);
   FOJ1D_::initialize(ModesContainer_::modes2arraySizeStatic(m), container);
   ///end FOJ initialization
-
-  std::cout << "ModesContainer1D::modes2arraySizeStatic(m)=" << ModesContainer1D::modes2arraySizeStatic(m) << "\n";
-  std::cout << "ModesContainer1D::modes2arraySizeStatic(m)=" << ModesContainer_::modes2arraySizeStatic(m) << "\n";
 
   JetSHDPDE jetDPDE(m, dftPts, nu, PI, order);
 
@@ -981,7 +1167,7 @@ void proveUnstableManifold(int direction){
     }
   }
 
-  std::ofstream boxDebug("box_debug.txt");
+  std::ofstream boxDebug("unstable_box_log.txt");
 
   finder.validateBox(dfPoint, dJacobian,
       zeroCenteredBox, ///a zero centred box (box around fixed point - fixed point)
@@ -991,22 +1177,22 @@ void proveUnstableManifold(int direction){
   std::cout << "VERIFYING CONE CONDITION!\n";
 
   bool ccsatisfy = verifyConeCondition( Qbox, tail, eigenvaluesRe, jetDPDE, boxDebug );
-
   tr = Qbox;
-
   tr.copyTailPartFrom( tail );
+  RealPolynomialBound W0(tr);
 
   //detaching the piece of the boundary from the set in the unstable direction
-  tr.set(Index1D(direction), ComplexScalar( rightBound(tr[ Index1D(direction) ].re), 0. ) );
-  tr.set(Index1D(0), ComplexScalar(0.,0.) );
+  W0.set(Index1D(direction), ComplexScalar( rightBound(tr[ Index1D(direction) ].re), 0. ) );
+  W0.set(Index1D(0), ComplexScalar(0.,0.) );
 
   std::cout << "the computed self-consistent bounds for the unstable (zero) fixed point:\n";
   std::cout << tr << "\n";
 
   std::ofstream manifold;
   manifold.open("manifold.in", std::ofstream::out);
+  manifold << std::setprecision(18);
 
-  printModes("isolating_neighbourhood_about_zero", manifold, tr);
+  printModes("W0_side_of_isolating_neighbourhood_about_zero", manifold, W0);
 
   manifold.close();
 
@@ -1023,16 +1209,16 @@ void proveUnstableManifold(int direction){
 
 
 
-
 int main(int argc, char * argv[]){
   setLoggers();
 
-  if(argc != 3){
-      std::cerr << "Number of arguments wrong.\nUsage: ./DBCPModelHetConProof [integrate|fixedpoint|manifold] approach_number\n" <<
-                   "\napproach_number is the approach type, 0 - the direct approach, 1 - the FFT approach, 2 - the FFT approach, but the first normalized derivative is calculated directly, in order to avoid blow-ups.\n";
+  std::cout << std::setprecision(__PRECISION__ );
+
+  if( argc != 2 && argc != 3 ){
+      std::cerr << "Number of arguments wrong.\nUsage: ./DBCPModelHetConProof [integrate|fixedpoint|manifold]\n" ;
     }else{
       if( strcmp(argv[1], "integrate") == 0 )
-        integrate( atoi( argv[2] ) );
+        integrate( 1 );
       else
         if( strcmp(argv[1], "fixedpoint") == 0 )
           proveStableFixedPoint();

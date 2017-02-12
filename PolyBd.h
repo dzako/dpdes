@@ -11,7 +11,6 @@
 #include "capd/vectalg/Container.h"
 #include "capd/vectalg/Matrix.h"
 #include "Real.h"
-#include "Odd.h"
 #include "norms.h"
 #include "DPDEContainer.h"
 #include "tail2.h"
@@ -75,8 +74,8 @@ public:
     RealPolynomialBound(){}
 
 
-    RealPolynomialBound(int n_) : ContainerType(modes2arraySizeStatic(n_)), SubspaceType(n_,
-                                  n_), n(n_), d(modes2arraySizeStatic(n_)), N(n_), D(modes2arraySizeStatic(n_)), w(0),
+    RealPolynomialBound(int n_) : ContainerType(modes2arraySizeStatic(n_)), SubspaceType(n_, n_), n(n_),
+                                  d(modes2arraySizeStatic(n_)), N(n_), D(modes2arraySizeStatic(n_)), w(0),
                                   //w should be 0 here , because the size of the container, and indices should be calculated for N ( equation is (w+1)*N )
                                   farTail(n, n), realContainer(modes2realArraySizeStatic(n_)),
                                   useAbsValues(false){
@@ -380,7 +379,6 @@ public:
       }
     }
 
-    ///TODO: check what to return in case of infinite dimensional container
     inline const int dimension() const{
       return d;
     }
@@ -438,31 +436,89 @@ public:
       return subsetFar(pb);
     }
 
+    int calculateExponent(ScalarType s)const{
+      int i=0;
+      DOUBLE  t = rightBound(s);
+      if(t!=0){
+        while(abs(t)<1){
+          t*=10;
+          i--;
+        }
+      }
+      return i;
+    }
+
     friend std::ostream& operator<<(std::ostream& out, const RealPolynomialBound& pb){
       IndexType index;
-      out << "RealPolynomialBound\n" << (DPDEContainer&)pb << "\n";
-      out << pb.dimension() << "\n";
+      //out << "RealPolynomialBound\n" << (DPDEContainer&)pb << "\n";
+      //out << pb.dimension() << "\n";
+
+#if __LATEX_OUT__
+        int eRe, eC, eCRe;
+        ScalarType re, cRe, rRe, Ct;
+        //170205 the latex output implemented here only for purely real modes
+
+        out<< "\\begin{array}{|c|c|}\\hline\\mathbf{k} & \\mathbf{a_k} \\\\ \\hline\\hline\n";
+        for(index = pb.firstModeIndex(pb.irProjectionPlusFiniteTail); !index.limitReached(pb.irProjectionPlusFiniteTail); index.inc(pb.irProjectionPlusFiniteTail)){
+          re = pb[index].re;
+          cRe = mid(re); rRe = re - cRe;
+          eRe = pb.calculateExponent(rRe);
+          eCRe = pb.calculateExponent(cRe);
+          if(eCRe < -2)
+            out << index << " & " << rightBound( cRe * pow(10, -eCRe) ) << "\\cdot 10^{" << eCRe << "}";
+          else
+            out << index << " & " << rightBound( cRe );
+          if( eRe < -1)
+            out << "+" << rRe * pow(10, -eRe) << "10^{" << eRe << "}\\\\ \n";
+          else
+            out << "+" << rRe << "\\\\ \n";
+        }
+        Ct = pb.farTail.getC();
+        eC = pb.calculateExponent( Ct );
+        if(eC < -1)
+          out << "\\geq " << index << " & <" << rightBound(Ct) * pow(10, -eC) << "\\cdot 10^{" << eC << "}/k^{" << rightBound( pb.farTail.getS() ) << "}\\\\\\hline\\end{array}\n\n";
+        else
+          out << "\\geq " << index << " & \\leq" << rightBound(Ct) << "/k^{" << rightBound( pb.farTail.getS() ) << "}\\\\\\hline\\end{array}\n\n";
+
+#else
+      out << "mode index: interval of values\n";
       if(!pb.infiniteDimensional){
         for(index = pb.firstModeIndex(pb.irProjection); !index.limitReached(pb.irProjection); index.inc(pb.irProjection)){
-          out << index << "(" << pb.mode2array(index) << ": " << pb[index] << "\n";
+          if(__OUTPUT_MODES__ == 2){
+            out << index << "(" << pb.mode2array(index) << ": " << pb[index] << "\n";
+          }else{
+            if(__OUTPUT_MODES__ == 1){
+              out << index << "(" << pb.mode2array(index) << ": " << pb[index].im << "\n";
+            }else{
+              out << index << "(" << pb.mode2array(index) << ": " << pb[index].re << "\n";
+            }
+          }
         }
       }else{
         //printing out the whole redundant range
         for(index = pb.firstModeIndex(pb.irProjectionPlusFiniteTail); !index.limitReached(pb.irProjectionPlusFiniteTail); index.inc(pb.irProjectionPlusFiniteTail)){
-          out << index << ": " << pb[index] << "\n";
-          //out << index.k[0] << " " << index.k[1] << " " <<rightBound(pb[index].mid().re) << "\n";
+          if(__OUTPUT_MODES__ == 2){
+            out << index << ": " << pb[index] << "\n";
+          }else{
+            if(__OUTPUT_MODES__ == 1){
+              out << index << ": " << pb[index].im << "\n";
+            }else{
+              out << index << ": " << pb[index].re << "\n";
+            }
+          }
         }
         /*out << "Redundant range:\n";
         for(index = pb.firstModeIndex(pb.irRedundantRange); !index.limitReached(pb.irRedundantRange); index.inc(pb.irRedundantRange)){
           out << index << ": " << pb.redundantMode(index) << "\n";
         }*/
-        out << "\nFarTail(" << pb.n << " - " << pb.N << "):\n" << pb.farTail << "\n";
+        out  << pb.farTail << "\n";
 //      for debug purposes the redundant range is printed out (the range of modes from the far tail that were calculated explicitely)
 //      out << "Redundant range(" << pb.N << " - 2*" << pb.N << "):\n";
 //      for(index = pb.firstModeIndex(pb.irRedundantRange); !index.limitReached(pb.irRedundantRange); index.inc(pb.irRedundantRange)){
 //        out << index << ": " << pb.redundantMode(index) << "\n";
 //      }
       }
+#endif
       return out;
     }
 
@@ -547,11 +603,10 @@ public:
     inline int changeM(int newM, bool guard = false){
       IndexType index;
       if(index.d() == 1){
-        std::cout << "HERE, M=" << this->M <<", newM=" << newM << "\n";
-        if(this->M > newM) { /// new dimension is smaller than current dimension
+        if(this->N > newM) { /// new dimension is smaller than current dimension
           ScalarType norm, ntp, max = 0;
           int i;
-          for(i = this->M; i >= newM + 1; --i) {
+          for(i = this->N; i >= newM + 1; --i) {
             norm = (*this)[IndexType(i)].norm();
             ntp = norm * power(ScalarType(i), farTail.m_s);
             if(guard) {
@@ -570,7 +625,7 @@ public:
           }
 
           newM = i;
-          if(newM <= this->M) {
+          if(newM <= this->N) {
             //we have to estimate rest by newC/k^s
             ContainerType tmp( *this );
             this->resize( modes2arraySizeStatic( (w+1) * newM ) );
@@ -579,19 +634,19 @@ public:
             farTail.setC(max);
             farTail.setM(newM);
             N = newM;
-            this->M = newM;
+            this->M = modes2arraySizeStatic(newM);
             resetRanges();
           }
           return newM;
         }
-        if(this->M < newM) { /// new dimension is larger than current dimension
+        if(this->N < newM) { /// new dimension is larger than current dimension
           ContainerType tmp( *this );
           this->resize( modes2arraySizeStatic( (w+1) * newM) );
           for(int i = 0; i < tmp.dimension(); i++)
             ((ContainerType&)(*this))[i] = tmp[i];
           int oldM = N;
           N = newM;
-          this->M = newM;
+          this->M = modes2arraySizeStatic(newM);
           resetRanges();
           int i;
           for(i = oldM + 1; i <= newM; ++i) {
