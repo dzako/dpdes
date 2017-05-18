@@ -1112,7 +1112,11 @@ public:
     m_sufficientlyLarge = m_d + m_p + 1;
     m_N_coeff = nu_;
     piOver_l = 0.5;
-    sigma = 0.405284735;
+    RealType small_interval;
+    setLeftBound(small_interval, -1e-16);
+    setRightBound(small_interval, 1e-16);
+    sigma = 0.40528473456935108  + small_interval;
+    std::cout << "sigma=" << sigma << "\n";
   }
 
   DBCP(int m, int M, RealType nu_) :
@@ -1124,7 +1128,10 @@ public:
     m_sufficientlyLarge = m_d + m_p + 1;
     m_N_coeff = nu_;
     piOver_l = 0.5;
-    sigma = 0.405284735;
+    RealType small_interval;
+    setLeftBound(small_interval, -1e-16);
+    setRightBound(small_interval, 1e-16);
+    sigma = 0.40528473456935108 + small_interval;
   }
 
   RealType ni(int k) const {
@@ -1177,7 +1184,6 @@ public:
     return Ncoeff;
   }
 
-  //TODO: this functions below are implemented provisionally
 
   ///Returns V(K)=\{ \inf{v(|k|} | |k|>=K} \}, see definition of dissipative PDE in the paper.
   ///Eigenvalues of a dPDE satisfies \lambda_k=-\nu(|k|)|k|^p .
@@ -1192,7 +1198,6 @@ public:
   /**returns smallest integer K larger than k, such that f(i) is monotonously non increasing function for all i>K.
    * Where f(i) = e^{h\lambda_k} k^r
    */
-  //TODO: different for this equation
   int maximumPoint(const RealType& h, int r, int k) const {
     if (-4 * rightBound(h) * k * k * k * k * piOver_l * piOver_l * piOver_l
         * piOver_l + 2 * nu * rightBound(h) * k * k * piOver_l * piOver_l + r

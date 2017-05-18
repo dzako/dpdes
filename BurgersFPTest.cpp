@@ -9,9 +9,9 @@
 #include <stdlib.h>
 #include <cstring>
 //#include "capd/filib/Interval.h"
-#include "capd/intervals/Interval.hpp"
-#include "config.h"
 
+#include "config.h"
+#include "capd/intervals/Interval.hpp"
 
 #define DOUBLE double
 #if __FILIB__

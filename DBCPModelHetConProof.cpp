@@ -403,7 +403,7 @@ void noentry(const RealPolynomialBound& pb1, const RealPolynomialBound& pb2, cap
 
 
 
-void integrate(int approach){
+void integrate(int approach, int global){
 
   int m, /*change FOJ1D stack dimension*/ M, dftPts, dftPts2, order;
   double step_, nu_, sigma_, piOverL_;
@@ -450,7 +450,7 @@ void integrate(int approach){
   //adds dummy interval on zeroth coordinate (anyway it is constant)
   basin[Index1D(0)] = Interval(-1.,1.);
 
-  ss << "integration_log.txt";
+  ss << "num_integration_log.txt";
 
   log.logfile(ss.str().c_str(), true); log.log = true;
   time_t rawtime;
@@ -583,8 +583,6 @@ void integrate(int approach){
           std::cout << "\nthe FINITE PART of the current set at time t=" << i*step << " (timestep i=" << i << ") is within the basin of attraction.\n \n";
           break;
 
-          //verifyInclusionInProperCoordinates(dim, rs, x0, Q, Qinv, set);
-
         }else{
           noentry(set.getPerturbationParams(), basin, log);
         }
@@ -608,7 +606,11 @@ void integrate(int approach){
 
   //the tail part
   //we increase M in order to get entry of the fartail
-  M = 200;
+  if(global == 1)
+    M = 250;
+  else
+    M = 200;
+
   u_0.changeM(M, false);
   log << "INCREASING THE FINITE TAIL DIMENSION UPTO M=" << M << " IN ORDER TO OBTAIN THE FARTAIL ENTRY.\n";
   std::cout << "INCREASING THE FINITE TAIL DIMENSION UPTO M=" << M << " IN ORDER TO OBTAIN THE FARTAIL ENTRY.\n";
@@ -778,13 +780,16 @@ Interval calculateLogNorm(Box& Qbox, RealPolynomialBound& tail, IntervalVector& 
 }
 
 
-void proveStableFixedPoint(){
+void proveStableFixedPoint(int global){
   int m, /*change FOJ1D stack dimension*/ M, dftPts, dftPts2, order;
   double step_, nu_, sigma_, piOverL_;
   Interval nu, step;
 
   std::ofstream currentSet;
-  loadDataFromFile("fixedpoint_config.in", &m, &M, &dftPts, &dftPts2, &order, &step_, &nu_, &sigma_, &piOverL_ );
+  if(global == 1)
+    loadDataFromFile("fixedpoint_global_config.in", &m, &M, &dftPts, &dftPts2, &order, &step_, &nu_, &sigma_, &piOverL_ );
+  else
+    loadDataFromFile("fixedpoint_config.in", &m, &M, &dftPts, &dftPts2, &order, &step_, &nu_, &sigma_, &piOverL_ );
 
   step = step_;
   nu = nu_;
@@ -792,7 +797,12 @@ void proveStableFixedPoint(){
   IntervalVector fixedPoint(m + 1), zeroCenteredBox(m + 1), eigenvaluesRe(m + 1);
   DoubleVector dfPoint( m + 1 );
 
-  loadApproximateFixedPoint( "fixedPoint.in", fixedPoint );
+
+  if(global == 1)
+    loadApproximateFixedPoint( "fixedPointGlobal.in", fixedPoint );
+  else
+    loadApproximateFixedPoint( "fixedPoint.in", fixedPoint );
+
   int i,j;
   for(i = 0; i < m + 1; i++)
     dfPoint[i] = rightBound( fixedPoint[i] );
@@ -851,8 +861,8 @@ void proveStableFixedPoint(){
   u = dfPoint;
   basicDpde(u, f);
 
-
-  std::ofstream boxDebug("stable_box_log.txt");
+  std::ofstream boxDebug;
+  boxDebug.open("stable_box_log.txt");
 
   finder.validateBox(dfPoint, dJacobian,
       zeroCenteredBox, ///a zero centred box (box around fixed point - fixed point)
@@ -881,6 +891,10 @@ void proveStableFixedPoint(){
   tr = Qwrap;
   tr.copyTailPartFrom( Qbox.getTail() );
 
+  if(global == 1)
+    std::cout << "THE FIXED POINT CORRESPONDS TO THE GLOBAL MINIMUM\n";
+  else
+    std::cout << "THE FIXED POINT CORRESPONDS TO THE LOCAL MINIMUM\n";
   std::cout << "The constructed basin of attraction of the stable fixed point (first " << n << " coordinates are given in eigenbasis Q  -- saved in Q.in file):\n" << tr;
 
   boxDebug.close();
@@ -1141,9 +1155,11 @@ void proveUnstableManifold(int direction){
 
   const DOUBLE SMALL = 1e-12;
 
-  const DOUBLE MANIFOLD = 0.75e-01;
+
+  const DOUBLE MANIFOLD = (direction == 3 ? 0.75e-01 : (direction == 2 ? 1.e-01 : 0.) );
 
   zeroCenteredBox = Interval( -SMALL, SMALL );
+  zeroCenteredBox[0] = 0.;
 
   zeroCenteredBox[direction] = Interval( -MANIFOLD, MANIFOLD );
 
@@ -1167,7 +1183,8 @@ void proveUnstableManifold(int direction){
     }
   }
 
-  std::ofstream boxDebug("unstable_box_log.txt");
+  std::ofstream boxDebug;
+  boxDebug.open("unstable_box_log.txt");
 
   finder.validateBox(dfPoint, dJacobian,
       zeroCenteredBox, ///a zero centred box (box around fixed point - fixed point)
@@ -1189,7 +1206,17 @@ void proveUnstableManifold(int direction){
   std::cout << tr << "\n";
 
   std::ofstream manifold;
+
   manifold.open("manifold.in", std::ofstream::out);
+
+  std::cout << "THE ISOLATING BLOCK IS STRETCHED ALONG THE EIGENDIRECTION " << direction << "\n";
+  if(direction == 2)
+    std::cout << "THE UNSTABLE MANIFOLD ALONG THIS DIRECTION REACHES TO THE GLOBAL MINIMUM\n";
+  else
+    if(direction == 3)
+      std::cout << "THE UNSTABLE MANIFOLD ALONG THIS DIRECTION REACHES TO THE LOCAL MINIMUM\n";
+
+
   manifold << std::setprecision(18);
 
   printModes("W0_side_of_isolating_neighbourhood_about_zero", manifold, W0);
@@ -1215,17 +1242,31 @@ int main(int argc, char * argv[]){
   std::cout << std::setprecision(__PRECISION__ );
 
   if( argc != 2 && argc != 3 ){
-      std::cerr << "Number of arguments wrong.\nUsage: ./DBCPModelHetConProof [integrate|fixedpoint|manifold]\n" ;
+      std::cerr << "Number of arguments wrong.\nUsage: ./DBCPModelHetConProof [integrate|fixedpoint|manifold] [local|global]\n" ;
     }else{
-      if( strcmp(argv[1], "integrate") == 0 )
-        integrate( 1 );
+      int global;
+      if( strcmp(argv[2], "local") == 0 )
+        global = 0;
       else
-        if( strcmp(argv[1], "fixedpoint") == 0 )
-          proveStableFixedPoint();
-        else
+        if( strcmp(argv[2], "global") == 0 )
+          global = 1;
+
+      if( strcmp(argv[1], "integrate") == 0 )
+        integrate( 1 , global );
+      else
+        if( strcmp(argv[1], "fixedpoint") == 0 ){
+          proveStableFixedPoint(global);
+        }else{
           if( strcmp(argv[1], "manifold") == 0 ){
-            proveUnstableManifold(3);
+            if( strcmp(argv[2], "local") == 0 ){
+              //the coonection from unstable zero to local minimizer is along the third eigenvector
+              proveUnstableManifold(3);
+            }else{
+              //the coonection from unstable zero to global minimizer is along the second eigenvector
+              proveUnstableManifold(2);
+            }
           }
+        }
     }
 
   FOJ1D::destroy();

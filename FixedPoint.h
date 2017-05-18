@@ -763,7 +763,7 @@ bool BoxFinder<MultiMapT, JetMultiMapT, DoubleT, D_>::findIsolatingTail(VectorTy
 
   while(s_ >= m_multiMap.m_sufficientlyLarge && !tailFound) {
 #if __BOX_DEBUG__
-    out << "Tail finding iteration, s=" << ss << "\n";
+    out << "Tail finding iteration, s=" << s_ << "\n";
     out << "box=" << box << "\n";
     out << "tail=" << tail << "\n";
     out.flush();
